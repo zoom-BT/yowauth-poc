@@ -1,0 +1,67 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  liquibase:
+    enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.r2dbc.autoconfigure.R2dbcAutoConfiguration
+      - org.springframework.boot.data.r2dbc.autoconfigure.DataR2dbcAutoConfiguration
+      - org.springframework.boot.data.r2dbc.autoconfigure.DataR2dbcRepositoriesAutoConfiguration
+      - org.springframework.boot.r2dbc.autoconfigure.health.ConnectionFactoryHealthContributorAutoConfiguration
+      - org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration
+      - org.springframework.boot.data.redis.autoconfigure.DataRedisReactiveAutoConfiguration
+      - org.springframework.boot.data.redis.autoconfigure.DataRedisRepositoriesAutoConfiguration
+
+management:
+  health:
+    elasticsearch:
+      enabled: false
+    redis:
+      enabled: false
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+
+iwm:
+  persistence:
+    mode: memory
+  outbox:
+    replay-on-startup:
+      enabled: false
+    delivery:
+      type: recording
+    consumers:
+      mode: inline
+    relay:
+      enabled: false
+    allow-manual-relay-only: true
+  redis:
+    permission-cache:
+      enabled: false
+  search:
+    elasticsearch:
+      enabled: false
+  management:
+    security:
+      api-key: ${IWM_MANAGEMENT_API_KEY:poc-management-key-please-rotate}
+  security:
+    cors:
+      allowed-origins: ${IWM_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
+    client-applications:
+      bootstrap:
+        enabled: true
+        client-id: poc-client
+        name: YowAuth POC Client
+        description: Bootstrap client for the YowAuth POC.
+        secret: ${IWM_POC_CLIENT_SECRET:poc-secret-key}
+    jwt:
+      auto-generate-key-pair: true
+  organization:
+    service-subscriptions:
+      provision-subscribable-services-on-create: true
