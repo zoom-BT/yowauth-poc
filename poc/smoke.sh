@@ -74,6 +74,6 @@ echo "$XCHG" | python -m json.tool
 SVC_ACCESS=$(echo "$XCHG" | jq_field "['access_token']")
 
 section "9. oauth2/userinfo (bearer access token de service)"
-curl -s "${BASE_URL}/oauth2/userinfo" -H "Authorization: Bearer ${SVC_ACCESS}" -w "\n[HTTP %{http_code}]\n" | python -m json.tool
+curl -s "${BASE_URL}/oauth2/userinfo" -H "Authorization: Bearer ${SVC_ACCESS}" | python -m json.tool
 
 printf '\n\033[1;32m✓ Flux YowAuth complet validé contre %s\033[0m\n' "${BASE_URL}"
