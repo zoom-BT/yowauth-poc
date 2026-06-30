@@ -153,7 +153,10 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
             <h1 className="dash__hello">Bonjour, {p.username}</h1>
             <p className="dash__status">● Connecté à YowAuth</p>
           </div>
-          <button className="btn-ghost" onClick={onLogout}>Déconnexion</button>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <Link href="/docs" className="btn-ghost" style={{ textDecoration: "none" }}>Guide API</Link>
+            <button className="btn-ghost" onClick={onLogout}>Déconnexion</button>
+          </div>
         </div>
       </header>
 
@@ -194,8 +197,9 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
           <pre className="jwt">{JSON.stringify(claims, null, 2)}</pre>
         </div>
 
-        <p style={{ textAlign: "center", fontSize: 13 }}>
-          <Link href="/demo">Voir la démo technique du flux complet →</Link>
+        <p style={{ textAlign: "center", fontSize: 13, display: "flex", gap: 18, justifyContent: "center" }}>
+          <Link href="/docs">Guide API (serveur réel) →</Link>
+          <Link href="/demo">Démo technique du flux →</Link>
         </p>
       </div>
     </main>
