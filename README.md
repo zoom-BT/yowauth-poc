@@ -5,7 +5,7 @@ extrait du monolithe modulaire `KSM_Kernel_Layer` dans un dépôt **autonome**, 
 **gratuitement**, et démontré de bout en bout.
 
 - **API live (Render)** : https://yowauth-poc.onrender.com
-- **Démo web (Vercel)** : _(URL Vercel à renseigner après déploiement)_
+- **Démo web (Vercel)** : https://yowauth-poc.vercel.app
 - **Swagger UI** : https://yowauth-poc.onrender.com/swagger-ui.html
 - **OIDC discovery** : https://yowauth-poc.onrender.com/.well-known/openid-configuration
 
