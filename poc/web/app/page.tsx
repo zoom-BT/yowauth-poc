@@ -1,194 +1,240 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { config, decodeJwt, login, signUpAndVerify, type Session } from "./lib/yowauth";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-const CLIENT_ID = process.env.NEXT_PUBLIC_CLIENT_ID ?? "poc-client";
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? "poc-secret-key";
-const TENANT = process.env.NEXT_PUBLIC_TENANT_ID ?? "00000000-0000-0000-0000-000000000001";
-const SERVICE_CODE = process.env.NEXT_PUBLIC_SERVICE_CODE ?? "SALES";
-
-const baseHeaders: Record<string, string> = {
-  "Content-Type": "application/json",
-  "X-Client-Id": CLIENT_ID,
-  "X-Api-Key": API_KEY,
-  "X-Tenant-Id": TENANT,
-};
-
-type Step = { label: string; status: number; ok: boolean; body: unknown };
-
-function decodeJwt(token: string): unknown {
-  try {
-    const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-    return JSON.parse(decodeURIComponent(escape(atob(payload))));
-  } catch {
-    return null;
-  }
-}
+const STORAGE_KEY = "yowauth.session";
 
 export default function Home() {
-  const [steps, setSteps] = useState<Step[]>([]);
-  const [token, setToken] = useState<string>("");
-  const [orgs, setOrgs] = useState<unknown[]>([]);
-  const [running, setRunning] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [principal, setPrincipal] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
-  async function call(label: string, url: string, init?: RequestInit): Promise<unknown> {
-    const res = await fetch(url, init);
-    let body: unknown;
-    const text = await res.text();
-    try {
-      body = JSON.parse(text);
-    } catch {
-      body = text;
+  useEffect(() => {
+    const raw = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
+    if (raw) {
+      try {
+        setSession(JSON.parse(raw) as Session);
+      } catch {
+        /* ignore */
+      }
     }
-    setSteps((prev) => [...prev, { label, status: res.status, ok: res.ok, body }]);
-    return body;
+  }, []);
+
+  function persist(s: Session | null) {
+    setSession(s);
+    if (typeof window !== "undefined") {
+      if (s) localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+      else localStorage.removeItem(STORAGE_KEY);
+    }
   }
 
-  async function run() {
-    setRunning(true);
-    setSteps([]);
-    setToken("");
-    setOrgs([]);
+  async function onLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    setNotice("");
     try {
-      const user = `poc_${Date.now()}`;
-      const pw = "P@ssw0rd!2024";
-
-      await call("1. openid-configuration", `${API}/.well-known/openid-configuration`);
-      await call("2. JWKS (cle publique RS256)", `${API}/.well-known/jwks.json`);
-
-      await call("3. sign-up", `${API}/api/auth/sign-up`, {
-        method: "POST",
-        headers: baseHeaders,
-        body: JSON.stringify({
-          tenantId: TENANT,
-          username: user,
-          email: `${user}@demo.io`,
-          password: pw,
-          firstName: "Demo",
-          lastName: "User",
-        }),
-      });
-
-      const resend = (await call("4. email-verification (mode PREVIEW)", `${API}/api/auth/email-verification/resend`, {
-        method: "POST",
-        headers: baseHeaders,
-        body: JSON.stringify({ principal: user }),
-      })) as { data?: { challengeTokenPreview?: string } };
-      const vtoken = resend?.data?.challengeTokenPreview ?? "";
-
-      await call("5. email-verification/confirm", `${API}/api/auth/email-verification/confirm`, {
-        method: "POST",
-        headers: baseHeaders,
-        body: JSON.stringify({ verificationToken: vtoken }),
-      });
-
-      const login = (await call("6. login (+ organisations)", `${API}/api/auth/login`, {
-        method: "POST",
-        headers: baseHeaders,
-        body: JSON.stringify({ principal: user, password: pw }),
-      })) as {
-        data?: { accessToken?: string; sharedSession?: { token?: string }; organizations?: unknown[] };
-      };
-      const access = login?.data?.accessToken ?? "";
-      const sso = login?.data?.sharedSession?.token ?? "";
-      setToken(access);
-      setOrgs(login?.data?.organizations ?? []);
-
-      await call("7. users/me (bearer)", `${API}/api/users/me`, {
-        headers: { ...baseHeaders, Authorization: `Bearer ${access}` },
-      });
-
-      const ctx = (decodeJwt(sso) as { contexts?: { contextId?: string }[] })?.contexts?.[0]?.contextId ?? "";
-      const form = new URLSearchParams({
-        grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
-        subject_token: sso,
-        subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
-        context_id: ctx,
-        service_code: SERVICE_CODE,
-        client_id: CLIENT_ID,
-        client_secret: API_KEY,
-      });
-      const xchg = (await call("8. oauth2/token (token-exchange)", `${API}/oauth2/token`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: form.toString(),
-      })) as { access_token?: string };
-
-      await call("9. oauth2/userinfo", `${API}/oauth2/userinfo`, {
-        headers: { Authorization: `Bearer ${xchg?.access_token ?? ""}` },
-      });
-    } catch (e) {
-      setSteps((prev) => [...prev, { label: "ERREUR", status: 0, ok: false, body: String(e) }]);
+      persist(await login(principal.trim(), password));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setRunning(false);
+      setBusy(false);
     }
+  }
+
+  async function onSignup(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await signUpAndVerify(principal.trim(), email.trim(), password);
+      // Email auto-vérifié en coulisse → connexion directe.
+      persist(await login(principal.trim(), password));
+      setNotice("Compte créé, email vérifié automatiquement, connecté ✓");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (session) {
+    return <Dashboard session={session} onLogout={() => persist(null)} />;
   }
 
   return (
-    <main style={{ fontFamily: "system-ui, sans-serif", maxWidth: 920, margin: "0 auto", padding: "2rem 1rem" }}>
-      <h1 style={{ marginBottom: 4 }}>YowAuth — POC</h1>
-      <p style={{ color: "#666", marginTop: 0 }}>
-        Fournisseur d&apos;identite (IdP) — flux complet contre <code>{API}</code>
-      </p>
+    <main style={shell}>
+      <div style={card}>
+        <h1 style={{ margin: "0 0 2px", fontSize: 26 }}>YowAuth</h1>
+        <p style={{ marginTop: 0, color: "#64748b", fontSize: 14 }}>
+          Connexion via l&apos;IdP <code>{config.API.replace(/^https?:\/\//, "")}</code>
+        </p>
 
-      <button
-        onClick={run}
-        disabled={running}
-        style={{
-          padding: "0.7rem 1.4rem",
-          fontSize: 16,
-          fontWeight: 600,
-          color: "#fff",
-          background: running ? "#888" : "#2563eb",
-          border: "none",
-          borderRadius: 8,
-          cursor: running ? "default" : "pointer",
-        }}
-      >
-        {running ? "Execution…" : "▶ Lancer le flux sign-up → login → JWT → userinfo"}
-      </button>
+        <div style={tabs}>
+          <button onClick={() => setMode("login")} style={tab(mode === "login")}>Connexion</button>
+          <button onClick={() => setMode("signup")} style={tab(mode === "signup")}>Inscription</button>
+        </div>
 
-      {orgs.length > 0 && (
-        <section style={{ marginTop: 24 }}>
-          <h3>Organisations accessibles</h3>
-          <pre style={pre}>{JSON.stringify(orgs, null, 2)}</pre>
-        </section>
-      )}
+        <form onSubmit={mode === "login" ? onLogin : onSignup}>
+          <label style={lbl}>Identifiant {mode === "login" ? "(username ou email)" : "(username)"}</label>
+          <input style={inp} value={principal} onChange={(e) => setPrincipal(e.target.value)} placeholder="ex: alice" required />
 
-      {token && (
-        <section style={{ marginTop: 24 }}>
-          <h3>JWT (access token) — decode</h3>
-          <pre style={pre}>{JSON.stringify(decodeJwt(token), null, 2)}</pre>
-        </section>
-      )}
+          {mode === "signup" && (
+            <>
+              <label style={lbl}>Email</label>
+              <input style={inp} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="alice@demo.io" required />
+            </>
+          )}
 
-      <section style={{ marginTop: 24 }}>
-        <h3>Etapes</h3>
-        {steps.map((s, i) => (
-          <details
-            key={i}
-            open={!s.ok}
-            style={{ marginBottom: 8, border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px" }}
-          >
-            <summary style={{ cursor: "pointer", fontWeight: 600 }}>
-              <span style={{ color: s.ok ? "#16a34a" : "#dc2626" }}>{s.ok ? "✓" : "✗"}</span> {s.label}{" "}
-              <span style={{ color: "#888", fontWeight: 400 }}>[HTTP {s.status}]</span>
-            </summary>
-            <pre style={pre}>{JSON.stringify(s.body, null, 2)}</pre>
-          </details>
-        ))}
-      </section>
+          <label style={lbl}>Mot de passe</label>
+          <input style={inp} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
+
+          <button type="submit" disabled={busy} style={primaryBtn(busy)}>
+            {busy ? "…" : mode === "login" ? "Se connecter" : "Créer le compte"}
+          </button>
+        </form>
+
+        {error && <p style={errorBox}>{error}</p>}
+        {notice && <p style={noticeBox}>{notice}</p>}
+
+        <p style={{ marginTop: 20, fontSize: 13, color: "#94a3b8", textAlign: "center" }}>
+          <Link href="/demo" style={{ color: "#2563eb" }}>Voir la démo automatique du flux complet →</Link>
+        </p>
+      </div>
     </main>
   );
 }
 
-const pre: React.CSSProperties = {
-  background: "#0b1021",
-  color: "#7CFC9B",
-  padding: "1rem",
-  borderRadius: 8,
-  overflow: "auto",
-  fontSize: 13,
-  lineHeight: 1.5,
+function Dashboard({ session, onLogout }: { session: Session; onLogout: () => void }) {
+  const claims = decodeJwt(session.accessToken);
+  const p = session.profile;
+  return (
+    <main style={shell}>
+      <div style={{ ...card, maxWidth: 720 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h1 style={{ margin: 0, fontSize: 24 }}>Bienvenue, {p.username} 👋</h1>
+          <button onClick={onLogout} style={logoutBtn}>Déconnexion</button>
+        </div>
+        <p style={{ color: "#16a34a", fontWeight: 600, marginTop: 6 }}>● Connecté à YowAuth</p>
+
+        <h3 style={h3}>Profil</h3>
+        <dl style={dl}>
+          <Row k="Email" v={p.email} />
+          <Row k="Statut" v={p.status} />
+          <Row k="Plan" v={p.plan} />
+          <Row k="Type de compte" v={p.accountType} />
+          <Row k="Email vérifié" v={String(p.emailVerified)} />
+          <Row k="Tenant" v={p.tenantId} />
+          <Row k="Actor ID" v={p.actorId} />
+        </dl>
+
+        <h3 style={h3}>Organisations accessibles</h3>
+        {session.organizations.length === 0 ? (
+          <p style={{ color: "#64748b" }}>Aucune organisation.</p>
+        ) : (
+          session.organizations.map((o) => (
+            <div key={o.organizationId} style={orgCard}>
+              <strong>{o.shortName}</strong> <span style={{ color: "#64748b" }}>({o.organizationCode})</span>
+              <div style={{ fontSize: 13, color: "#475569" }}>{o.longName}</div>
+              <div style={{ marginTop: 4 }}>
+                {o.services.map((s) => (
+                  <span key={s} style={badge}>{s}</span>
+                ))}
+              </div>
+            </div>
+          ))
+        )}
+
+        <h3 style={h3}>Access token (JWT RS256) — claims décodés</h3>
+        <pre style={pre}>{JSON.stringify(claims, null, 2)}</pre>
+
+        <p style={{ marginTop: 16, fontSize: 13 }}>
+          <Link href="/demo" style={{ color: "#2563eb" }}>Voir la démo automatique du flux complet →</Link>
+        </p>
+      </div>
+    </main>
+  );
+}
+
+function Row({ k, v }: { k: string; v: string }) {
+  return (
+    <>
+      <dt style={{ color: "#64748b" }}>{k}</dt>
+      <dd style={{ margin: 0, fontFamily: "ui-monospace, monospace", wordBreak: "break-all" }}>{v}</dd>
+    </>
+  );
+}
+
+const shell: React.CSSProperties = {
+  fontFamily: "system-ui, sans-serif",
+  minHeight: "100vh",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "linear-gradient(135deg,#eef2ff,#f8fafc)",
+  padding: "2rem 1rem",
 };
+const card: React.CSSProperties = {
+  width: "100%",
+  maxWidth: 400,
+  background: "#fff",
+  borderRadius: 16,
+  boxShadow: "0 10px 40px rgba(2,6,23,.10)",
+  padding: "28px 26px",
+};
+const tabs: React.CSSProperties = { display: "flex", gap: 8, margin: "18px 0 16px" };
+const tab = (active: boolean): React.CSSProperties => ({
+  flex: 1,
+  padding: "8px 0",
+  borderRadius: 8,
+  border: "1px solid " + (active ? "#2563eb" : "#e2e8f0"),
+  background: active ? "#2563eb" : "#fff",
+  color: active ? "#fff" : "#334155",
+  fontWeight: 600,
+  cursor: "pointer",
+});
+const lbl: React.CSSProperties = { display: "block", fontSize: 13, color: "#475569", margin: "10px 0 4px" };
+const inp: React.CSSProperties = {
+  width: "100%",
+  padding: "10px 12px",
+  borderRadius: 8,
+  border: "1px solid #cbd5e1",
+  fontSize: 15,
+  boxSizing: "border-box",
+};
+const primaryBtn = (busy: boolean): React.CSSProperties => ({
+  width: "100%",
+  marginTop: 18,
+  padding: "11px 0",
+  borderRadius: 8,
+  border: "none",
+  background: busy ? "#94a3b8" : "#2563eb",
+  color: "#fff",
+  fontSize: 15,
+  fontWeight: 700,
+  cursor: busy ? "default" : "pointer",
+});
+const logoutBtn: React.CSSProperties = {
+  padding: "8px 14px",
+  borderRadius: 8,
+  border: "1px solid #e2e8f0",
+  background: "#fff",
+  color: "#334155",
+  cursor: "pointer",
+  fontWeight: 600,
+};
+const errorBox: React.CSSProperties = { marginTop: 14, color: "#b91c1c", background: "#fef2f2", padding: "10px 12px", borderRadius: 8, fontSize: 14 };
+const noticeBox: React.CSSProperties = { marginTop: 14, color: "#166534", background: "#f0fdf4", padding: "10px 12px", borderRadius: 8, fontSize: 14 };
+const h3: React.CSSProperties = { marginTop: 24, marginBottom: 8, fontSize: 15, color: "#0f172a" };
+const dl: React.CSSProperties = { display: "grid", gridTemplateColumns: "140px 1fr", gap: "6px 12px", fontSize: 14 };
+const orgCard: React.CSSProperties = { border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 12px", marginBottom: 8 };
+const badge: React.CSSProperties = { display: "inline-block", background: "#eef2ff", color: "#3730a3", borderRadius: 6, padding: "2px 8px", fontSize: 12, marginRight: 6, fontWeight: 600 };
+const pre: React.CSSProperties = { background: "#0b1021", color: "#7CFC9B", padding: "1rem", borderRadius: 8, overflow: "auto", fontSize: 12.5, lineHeight: 1.5 };
