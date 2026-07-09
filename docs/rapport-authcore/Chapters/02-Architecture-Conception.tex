@@ -1,0 +1,49 @@
+\chapter{Architecture et Conception du Core}
+
+\section{Architecture hexagonale}
+Le module suit la structure hexagonale canonique. Le domaine ne connaît ni les technologies de transport (Web Flux) ni la persistance (bases relationnelles R2DBC). Il communique uniquement à travers des ports d'entrée et de sortie.
+
+\subsection{Couches applicatives et packages}
+\begin{center}
+\small
+\begin{longtable}{@{}p{4cm}p{10cm}@{}}
+\toprule
+\textbf{Couche / Package} & \textbf{Contenu} \\
+\midrule
+\code{domain.model} & Agrégat \code{UserAccount}, invariants métier, énumérations de statut. \\
+\code{application.port.in} & Cas d'usage entrants (\code{LoginUseCase}, \code{RegisterUserUseCase}, \code{PublicSignUpUseCase}, \code{DiscoverLoginContextsUseCase}). \\
+\code{application.port.out} & Ports sortants : \code{UserAccountRepository}, \code{RefreshTokenRepository}, \code{UserOrganizationAccessDirectory}. \\
+\code{application.service} & Orchestration : \code{AuthApplicationService}, \code{AuthContextApplicationService}, \code{AuthOidcService}, \code{AuthSharedSessionService}. \\
+\code{adapter.in.web} & Contrôleurs WebFlux (\code{AuthController}, \code{AuthOidcController}) et objets de transfert de données (DTO). \\
+\code{adapter.out.persistence} & Implémentation de la persistance (R2DBC H2/PostgreSQL). \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\subsection{Ports sortants et découplage}
+Trois ports d'interface principaux découplent \code{auth-core} des autres domaines du Kernel :
+\begin{itemize}
+  \item \code{UserAccountRepository} : Persistance réactive des comptes.
+  \item \code{UserOrganizationAccessDirectory} : Liste des organisations accessibles par un utilisateur.
+  \item \code{SignUpContextDirectory} : Résolution des contextes de rattachement lors d'un enregistrement.
+\end{itemize}
+
+\section{Modèle de Domaine et Invariants}
+L'agrégat central du domaine est la classe immuable \code{UserAccount}. Chaque modification d'état (activation du MFA, changement de plan, vérification d'email) produit une nouvelle instance de l'entité, garantissant la sûreté de la programmation réactive multitâche.
+
+\begin{invbox}[Invariants clés de YowAuth]
+\begin{itemize}
+  \item L'identifiant (\code{username}) et l'adresse email (\code{email}) sont uniques par Tenant et normalisés en minuscules.
+  \item Le hachage du mot de passe (\code{passwordHash}) utilise l'algorithme BCrypt.
+  \item L'accès d'un utilisateur dont le MFA est activé ne doit pas renvoyer de session JWT finale avant la validation réussie du défi OTP.
+  \item Les comptes suspendus ou désactivés (\code{status = 'DEACTIVATED'|'SUSPENDED'}) voient leur accès systématiquement bloqué lors de l'authentification.
+\end{itemize}
+\end{invbox}
+
+\section{Diagramme des cas d'utilisation}
+Les rôles sont distribués entre trois acteurs :
+\begin{itemize}
+  \item \textbf{Administrateur IAM} : Enregistre de nouveaux comptes via des accès d'administration sécurisés.
+  \item \textbf{Utilisateur final} : Se connecte, configure son MFA, modifie son forfait et consulte son profil.
+  \item \textbf{Applications clientes backend} : Réalisent le Token Exchange et valident les jetons de session.
+\end{itemize}

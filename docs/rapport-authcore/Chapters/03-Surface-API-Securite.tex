@@ -1,0 +1,44 @@
+\chapter{Surface d'API et Sécurité}
+
+\section{Endpoints de l'API d'Authentification}
+Les services exposés par YowAuth sont sécurisés par l'authentification applicative backend (\code{X-Client-Id} et \code{X-Api-Key}).
+
+\begin{center}
+\small
+\begin{longtable}{@{}p{1.2cm}p{6cm}p{7cm}@{}}
+\toprule
+\textbf{Méthode} & \textbf{Chemin} & \textbf{Description / Rôle} \\
+\midrule
+POST & \code{/api/auth/identify} & Vérification initiale de l'identifiant utilisateur (2 étapes). \\
+POST & \code{/api/auth/login} & Connexion locale (mot de passe ou déclenchement MFA). \\
+POST & \code{/api/auth/login/mfa/confirm} & Validation du défi MFA OTP. \\
+POST & \code{/api/auth/discover-contexts} & Découverte des tenants accessibles par un identifiant. \\
+POST & \code{/api/auth/select-context} & Sélection finale du contexte de connexion. \\
+POST & \code{/api/auth/sign-up} & Inscription publique en libre-service. \\
+PUT  & \code{/api/users/me/plan} & Changement de plan d'abonnement (forfait). \\
+POST & \code{/api/auth/mfa/enable|confirm|disable} & Gestion du cycle de vie du MFA par l'utilisateur. \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\section{Mécanismes de Sécurité}
+
+\subsection{Signature asymétrique RS256 et JWKS}
+Pour éliminer le besoin de partager des clés secrètes entre les microservices du Kernel, YowAuth utilise le standard de signature asymétrique **RS256**. 
+* Le Kernel utilise une **clé privée** pour signer les jetons d'accès JWT.
+* Les microservices ou applications clientes externes téléchargent périodiquement la **clé publique** correspondante via l'endpoint public d'ensemble de clés JWK (\code{/.well-known/jwks.json}) afin de valider localement et hors-ligne l'authenticité et l'intégrité des jetons.
+
+\subsection{Flux Single Sign-On (SSO) par Token Exchange}
+Le Single Sign-On s'appuie sur la spécification standard **OAuth2 Token Exchange (RFC 8693)**. Ce mécanisme permet à une application de confiance d'échanger le jeton de session principal obtenu par l'utilisateur contre un jeton d'accès spécifique à un service métier :
+\begin{lstlisting}[caption={Payload d'échange auprès de /oauth2/token}]
+curl -X POST https://kernel-core.yowyob.com/oauth2/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
+  --data-urlencode "subject_token=$SSO_TOKEN" \
+  --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:jwt" \
+  --data-urlencode "context_id=$ORGANIZATION_ID" \
+  --data-urlencode "service_code=SALES" \
+  --data-urlencode "client_id=$CLIENT_ID" \
+  --data-urlencode "client_secret=$CLIENT_SECRET"
+\end{lstlisting}
+Le jeton de service retourné est ensuite transmis dans l'en-tête de requête \code{Authorization: Bearer <token>} pour interroger l'endpoint d'informations du profil OIDC \code{/oauth2/userinfo} et autoriser l'utilisateur sur la plateforme cible.

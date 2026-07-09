@@ -1,0 +1,9 @@
+\chapter*{Résumé}
+
+Ce rapport présente l'analyse technique et la conception du module \textbf{\code{auth-core}} (nommé YowAuth) de la plateforme RT-Comops Backend, dans le cadre de l'UE Réseaux Mobiles et Intelligents de l'École Nationale Supérieure Polytechnique de Yaoundé (ENSPY). Le module a été développé selon les principes de l'architecture hexagonale en utilisant Spring Boot WebFlux pour sa nature réactive. YowAuth sépare l'identité humaine (\code{Actor}) du compte d'authentification (\code{UserAccount}). Il intègre des mécanismes rigoureux de sécurité : signature asymétrique de jetons JWT RS256, validation de clés publiques via JWKS, double authentification (MFA OTP par e-mail) et flux de Single Sign-On (SSO) conforme à la spécification OAuth2 Token-Exchange (RFC 8693). Une application Next.js a été réalisée pour démontrer et valider visuellement ces interactions en local et en production.
+
+\vspace{1.5cm}
+
+\chapter*{Abstract}
+
+This report describes the technical analysis and design of the \textbf{\code{auth-core}} module (named YowAuth) of the RT-Comops Backend platform, as part of the Mobile and Intelligent Networks course at the National Advanced School of Engineering of Yaounde (ENSPY). Developed using hexagonal architecture and Spring Boot WebFlux for reactive operations, YowAuth strictly separates human identity (\code{Actor}) from authentication credentials (\code{UserAccount}). It integrates state-of-the-art security features: asymmetric RS256 JWT signature, public key resolution via JWKS, multi-factor authentication (MFA OTP via email), and Single Sign-On (SSO) token exchange flows (RFC 8693). A Next.js client interface was built to demonstrate and visually validate these interactions in both development and production environments.

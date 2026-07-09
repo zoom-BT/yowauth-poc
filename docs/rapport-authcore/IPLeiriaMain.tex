@@ -1,0 +1,85 @@
+%%=====================================================================
+%%  RT-Comops Backend — Rapport d'Analyse & Conception (YowAuth)
+%%  Template IPLeiriaThesis adapté pour l'ENSPY
+%%=====================================================================
+\documentclass[
+  %options...
+]{IPLeiriaThesis}
+
+% Définition des métadonnées requises par le template IPLeiriaThesis
+\title{Rapport d'Analyse et Conception\\Module YowAuth (auth-core)}
+\author{Tchoutzine Tchetnkou albino .C (Matricule : 22P387)}
+\date{\today}
+
+% Métadonnées académiques & Professionnelles (ENSPY)
+\supervisor{Pr. Eng Thomas Djotio}
+\cosupervisor{M. Tsafack Fotso Savio} % Chef de projet / Manager
+\school{École Nationale Supérieure Polytechnique de Yaoundé (ENSPY)}
+\logo{logo_enspy.png}
+\department{Département de Génie Informatique}
+\degree{Génie Informatique -- Spécialité Réseaux Mobiles et Intelligents}
+
+% Charge les packages supplémentaires nécessaires
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+
+% Couleurs de la charte graphique ENSPY / Navy
+\definecolor{enspynavy}{HTML}{1F3A5F}
+\definecolor{rtgray}{HTML}{6B7280}
+\definecolor{rtlight}{HTML}{EEF2F7}
+\definecolor{rtcode}{HTML}{0B1021}
+\definecolor{rtaccent}{HTML}{2563EB}
+
+\newtcolorbox{rolebox}[1][]{
+  colback=rtlight, colframe=enspynavy, boxrule=0.8pt, arc=2pt,
+  left=8pt,right=8pt,top=6pt,bottom=6pt, #1}
+
+\newtcolorbox{invbox}[1][Invariants]{
+  enhanced, colback=white, colframe=enspynavy!70, boxrule=0.6pt, arc=1pt,
+  title=#1, coltitle=white, colbacktitle=enspynavy,
+  fonttitle=\bfseries, left=8pt,right=8pt,top=6pt,bottom=6pt}
+
+\newtcolorbox{notebox}{
+  colback=rtlight!60, colframe=rtaccent, boxrule=0pt,
+  leftrule=3pt, arc=0pt, left=8pt,right=8pt,top=5pt,bottom=5pt}
+
+\lstdefinestyle{shell}{
+  backgroundcolor=\color{rtcode}, basicstyle=\ttfamily\scriptsize\color{white},
+  breaklines=true, columns=fullflexible, frame=none,
+  keywordstyle=\color{cyan}, stringstyle=\color{green!60!white},
+  showstringspaces=false, xleftmargin=6pt, xrightmargin=6pt,
+  framexleftmargin=6pt, aboveskip=8pt, belowskip=8pt}
+\lstset{style=shell}
+
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\httpget}{\textcolor{white}{\colorbox{rtaccent}{\scriptsize\ttfamily\,GET\,}}}
+\newcommand{\httppost}{\textcolor{white}{\colorbox{green!45!black}{\scriptsize\ttfamily\,POST\,}}}
+\newcommand{\httpput}{\textcolor{white}{\colorbox{orange!80!black}{\scriptsize\ttfamily\,PUT\,}}}
+
+\begin{document}
+
+\maketitle
+
+%--------------------------- Front Matter ----------------------------
+\pagenumbering{roman}
+\include{Chapters/00-Abstract}
+
+\tableofcontents
+\listoffigures
+\listoftables
+\cleardoublepage
+
+%--------------------------- Main Matter -----------------------------
+\pagenumbering{arabic}
+
+\include{Chapters/01-Introduction}
+\include{Chapters/02-Architecture-Conception}
+\include{Chapters/03-Surface-API-Securite}
+\include{Chapters/04-Integration-POC}
+\include{Chapters/05-Conclusion}
+
+\end{document}

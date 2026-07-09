@@ -1,0 +1,68 @@
+\chapter{Intégration du Client de Démonstration (POC)}
+
+\section{Architecture Next.js du Frontend}
+Pour illustrer et valider les capacités de YowAuth, une interface client de démonstration moderne a été développée en **Next.js** et intégrée en local (\code{http://localhost:3000}) et en production (\code{https://yowauth-poc.vercel.app}).
+
+L'interface consomme directement les API réactives du Kernel et propose un parcours utilisateur complet de bout en bout.
+
+\section{Parcours d'authentification en deux étapes}
+L'ergonomie de connexion a été soignée en séparant l'identification de l'authentification :
+\begin{enumerate}
+  \item **Identification** : L'utilisateur saisit son identifiant. L'application vérifie son existence via \code{/api/auth/identify}.
+  \item **Saisie du Mot de passe** : Si l'identifiant est correct, le champ mot de passe apparaît. 
+  \item **Gestion du Défi MFA** : Si le serveur retourne un code d'état \code{202 Accepted} (indiquant que la double authentification est requise pour ce compte), l'application bascule sur l'interface OTP. L'utilisateur reçoit un code par e-mail et le valide pour obtenir son jeton de session final.
+\end{enumerate}
+
+\begin{figure}[h]
+  \centering
+  % \includegraphics[width=0.85\linewidth]{figures/poc-login-steps.png}
+  \fbox{\parbox{0.9\linewidth}{\centering\vspace{1.2cm}\itshape\color{rtgray}
+  Capture d'écran -- Connexion en 2 étapes (Identification \& Mot de passe)\\[4pt]
+  (Placer l'image dans \texttt{figures/poc-login-steps.png})\vspace{1.2cm}}}
+  \caption{Écran d'identification initiale et de saisie sécurisée du mot de passe.}
+  \label{fig:poc-login-steps}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  % \includegraphics[width=0.85\linewidth]{figures/poc-login-mfa.png}
+  \fbox{\parbox{0.9\linewidth}{\centering\vspace{1.2cm}\itshape\color{rtgray}
+  Capture d'écran -- Saisie du code de double authentification (MFA OTP)\\[4pt]
+  (Placer l'image dans \texttt{figures/poc-login-mfa.png})\vspace{1.2cm}}}
+  \caption{Écran de défi MFA OTP pour valider la session.}
+  \label{fig:poc-login-mfa}
+\end{figure}
+
+\section{Tableau de bord et Centre de Profil (IHM Professionnelle)}
+Après authentification, l'utilisateur est redirigé vers un tableau de bord professionnel structuré en une disposition responsive à **deux colonnes** :
+\begin{itemize}
+  \item **Colonne principale (Gauche)** : Affiche les tuiles des applications métiers actives de l'organisation courante. Ces tuiles ont été améliorées en remplaçant les anciens émojis par de grands visuels de haute qualité représentant la diversité et le professionnalisme des équipes.
+  \item **Barre latérale (Droite)** : Regroupe le centre de profil de l'utilisateur connecté, le sélecteur dynamique de forfait d'abonnement (liant l'action à \code{PUT /users/me/plan}), l'enrôlement ou la désactivation de la double authentification MFA en temps réel, et un inspecteur de jeton JWT déchiffré.
+\end{itemize}
+
+\begin{figure}[h]
+  \centering
+  % \includegraphics[width=0.9\linewidth]{figures/poc-dashboard.png}
+  \fbox{\parbox{0.95\linewidth}{\centering\vspace{1.5cm}\itshape\color{rtgray}
+  Capture d'écran -- Tableau de bord principal à deux colonnes\\[4pt]
+  (Placer l'image dans \texttt{figures/poc-dashboard.png})\vspace{1.5cm}}}
+  \caption{Disposition responsive en grille du tableau de bord d'applications et du profil utilisateur.}
+  \label{fig:poc-dashboard}
+\end{figure}
+
+\section{Simulateur OIDC SSO Terminal}
+Pour rendre visibles les processus invisibles du protocole OAuth2 / OIDC, le clic sur une application active intercepte la navigation et ouvre une modale de **simulateur SSO interactif**.
+Cette modale simule le comportement d'une application tierce qui s'intègre avec YowAuth. Elle affiche une console de débogage qui trace en temps réel les appels réseau :
+1. L'échange du jeton de session principal contre un jeton de service via le **Token Exchange** (\code{/oauth2/token}).
+2. La récupération du profil d'identité utilisateur via l'introspection du jeton (\code{/oauth2/userinfo}).
+Cette approche pédagogique permet aux développeurs de comprendre le fonctionnement interne du SSO de YowAuth.
+
+\begin{figure}[h]
+  \centering
+  % \includegraphics[width=0.85\linewidth]{figures/poc-sso-modal.png}
+  \fbox{\parbox{0.9\linewidth}{\centering\vspace{1.2cm}\itshape\color{rtgray}
+  Capture d'écran -- Console interactive du simulateur SSO OIDC\\[4pt]
+  (Placer l'image dans \texttt{figures/poc-sso-modal.png})\vspace{1.2cm}}}
+  \caption{Console technique illustrant le Token Exchange et la récupération UserInfo.}
+  \label{fig:poc-sso-modal}
+\end{figure}

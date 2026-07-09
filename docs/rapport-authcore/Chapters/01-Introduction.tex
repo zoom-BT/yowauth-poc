@@ -1,0 +1,25 @@
+\chapter{Introduction}
+
+\section{Objet du document}
+Ce rapport décrit l'analyse et la conception du module \textbf{\code{auth-core}} (nommé \emph{YowAuth}) de la plateforme RT-Comops Backend. Il constitue le document de référence technique et fonctionnelle du sous-système d'authentification : modèle de domaine, ports et adaptateurs, cas d'usage, diagrammes de séquence, invariants métier, surface d'API exposée, mécanismes de sécurité (JWT RS256, JWKS, OIDC) et stratégie de vérification.
+
+Ce projet a été réalisé au sein du département Génie Informatique de l'École Nationale Supérieure Polytechnique de Yaoundé (ENSPY) pour l'UE Réseaux Mobiles et Intelligents supervisée par le Pr. Eng Thomas Djotio, sous la gestion de projet de M. Tsafack Fotso Savio.
+
+\section{Positionnement de YowAuth dans le Kernel}
+La plateforme RT-Comops est un monolithe modulaire fondé sur une architecture hexagonale, organisé en plusieurs \emph{cores} fonctionnels plus un module de démarrage exécutable. Le module \code{auth-core} appartient au domaine \emph{Identité \& Accès}, aux côtés de \code{actor-core} (identités physiques) et \code{roles-core} (contrôle d'accès basé sur les rôles - RBAC).
+
+\begin{rolebox}
+\textbf{Séparation des concepts :} YowAuth sépare l'identité humaine (\code{Actor}, gérée par \code{actor-core}) du compte d'authentification (\code{UserAccount}). La signature RS256 des JWT et l'exposition du JWKS restent portées par \code{kernel-core} ; \code{auth-core} orchestre l'émission, la sélection de contexte, les challenges de sécurité et l'exposition OIDC après authentification réussie et résolution des permissions.
+\end{rolebox}
+
+\section{Périmètre fonctionnel}
+Le module couvre le cycle IAM (Identity and Access Management) complet :
+\begin{itemize}
+  \item Création et cycle de vie des comptes \code{UserAccount}.
+  \item Authentification locale tenant-scoped et découverte globale de contextes d'organisations.
+  \item Sélection de contexte de tenant ou d'organisation.
+  \item Émission d'un jeton d'accès JWT RS256 enrichi des privilèges et rôles.
+  \item Self-service utilisateur (gestion de profil, plan d'abonnement et statut d'onboarding).
+  \item Flux de challenge et de durcissement (CAPTCHA, OTP, MFA par e-mail).
+  \item Fournisseur OIDC central (métadonnées OIDC, token-exchange, userinfo, introspection, JWKS).
+\end{itemize}

@@ -1,0 +1,14 @@
+\chapter{Conclusion}
+
+Le module \code{auth-core} (YowAuth) fournit un système d'authentification robuste, moderne et standardisé pour l'écosystème RT-Comops. En appliquant les principes de l'architecture hexagonale et en tirant profit de Spring Boot WebFlux, il garantit un traitement hautement performant et découplé des problématiques de transport et de persistance.
+
+Les travaux menés au cours de ce projet à l'École Nationale Supérieure Polytechnique de Yaoundé (ENSPY) sous la direction du Pr. Eng Thomas Djotio et la coordination de M. Tsafack Fotso Savio ont permis d'atteindre l'ensemble des objectifs fixés :
+\begin{itemize}
+  \item Une modélisation stricte de l'agrégat \code{UserAccount} découplé des entités physiques de profil.
+  \item La mise en œuvre d'un parcours de connexion en 2 étapes sécurisé avec détection dynamique de compte.
+  \item Le durcissement de la sécurité par l'intégration d'un double facteur d'authentification (MFA OTP).
+  \item L'alignement sur les standards OIDC à travers le mécanisme de Token Exchange (RFC 8693).
+  \item Le développement d'une application de démonstration Next.js interactive et visuelle qui fait office de vitrine d'intégration.
+\end{itemize}
+
+Les perspectives d'évolution de YowAuth incluent l'extension du support MFA aux clés de sécurité physiques (FIDO2/WebAuthn), l'intégration native avec un serveur SMTP pour l'envoi d'e-mails réels en environnement de production, et le développement complet du back-office d'administration pour la désactivation ou la suspension des comptes à distance par les administrateurs système.
