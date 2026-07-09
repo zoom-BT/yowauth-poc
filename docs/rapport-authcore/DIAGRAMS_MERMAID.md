@@ -90,13 +90,13 @@ graph TD
     App([Application Cliente])
     
     subgraph YowAuth ["YowAuth (auth-core)"]
-        UC1[S'inscrire (Public Sign-Up)]
-        UC2[S'authentifier (Login 2 étapes & MFA)]
-        UC3[Découvrir les contextes d'organisation]
-        UC4[Sélectionner le contexte actif]
-        UC5[Gérer son profil (Plan, MFA, Onboarding)]
-        UC6[Échanger un jeton SSO (Token Exchange)]
-        UC7[Créer un compte utilisateur]
+        UC1["S'inscrire (Public Sign-Up)"]
+        UC2["S'authentifier (Login 2 étapes & MFA)"]
+        UC3["Découvrir les contextes d'organisation"]
+        UC4["Sélectionner le contexte actif"]
+        UC5["Gérer son profil (Plan, MFA, Onboarding)"]
+        UC6["Échanger un jeton SSO (Token Exchange)"]
+        UC7["Créer un compte utilisateur"]
     end
     
     User --> UC1
