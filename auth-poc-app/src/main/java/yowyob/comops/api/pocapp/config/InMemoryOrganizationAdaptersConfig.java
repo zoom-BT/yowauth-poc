@@ -33,8 +33,8 @@ public class InMemoryOrganizationAdaptersConfig {
     @Bean
     UserOrganizationAccessDirectory inMemoryUserOrganizationAccessDirectory() {
         return (tenantId, userId) -> Flux.just(new UserOrganizationAccess(
-                DEMO_ORG_ID, DEMO_ORG_CODE, "YowAuth Demo", "YowAuth Demo Organization",
-                List.of("SALES", "IAM")));
+                DEMO_ORG_ID, DEMO_ORG_CODE, "Yowyob Demo Corp", "Yowyob Demonstration Corporation",
+                List.of("COMMERCIAL", "SALES", "INVENTORY", "PRODUCT", "HRM", "ACCOUNTING")));
     }
 
     @Bean
