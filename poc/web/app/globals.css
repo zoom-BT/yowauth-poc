@@ -146,6 +146,12 @@ a:hover { text-decoration: underline; }
 /* ---------- Footer ---------- */
 .footer { border-top: 1px solid var(--line); margin-top: 30px; padding: 26px 0; color: var(--muted); font-size: 13px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
 
+/* ---------- Dashboard Layout ---------- */
+.dash { display: grid; grid-template-columns: 1fr 340px; gap: 28px; padding: 40px 0; }
+@media (max-width: 860px) {
+  .dash { grid-template-columns: 1fr; gap: 24px; padding: 24px 0; }
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 860px) {
   .hero { grid-template-columns: 1fr; gap: 28px; padding: 34px 0 20px; }

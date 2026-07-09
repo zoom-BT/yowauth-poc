@@ -333,204 +333,269 @@ function Launcher({ session }: { session: Session }) {
           <div className="nav__actions">
             <Link href="/docs" className="btn btn-ghost">Guide API</Link>
             <Link href="/demo" className="btn btn-ghost">Démo</Link>
-            <span className="chip"><span className="av">{initial}</span>{p.username}</span>
-            <button className="btn btn-outline" onClick={() => saveSession(null)}>Déconnexion</button>
+            <span className="chip" style={{ background: "var(--violet-soft)", color: "var(--brand-ink)", fontWeight: 600 }}>
+              <span className="av">{initial}</span>
+              {p.username}
+            </span>
+            <button className="btn btn-outline" style={{ borderColor: "#fecaca", color: "#b91c1c" }} onClick={() => saveSession(null)}>Déconnexion</button>
           </div>
         </div>
       </nav>
 
-      <section className="wrap">
-        <div className="lhead">
-          <h1>Bonjour, {p.username} 👋</h1>
-          <p>Voici les plateformes auxquelles vous avez accès dans votre espace Yowyob.</p>
+      <section className="wrap dash">
+        
+        {/* LEFT COLUMN: platforms */}
+        <div>
+          <div className="lhead" style={{ marginBottom: "24px" }}>
+            <span className="pill" style={{ textTransform: "uppercase", background: "var(--indigo-soft)", color: "var(--indigo)", padding: "4px 10px", fontSize: "11px", fontWeight: 700 }}>
+              🏢 {org.shortName}
+            </span>
+            <h1 style={{ marginTop: "10px", marginBottom: "6px" }}>Bonjour, {p.username} 👋</h1>
+            <p style={{ color: "var(--muted)", fontSize: "15px" }}>
+              Bienvenue sur votre portail unique Yowyob. Choisissez un service pour y accéder.
+            </p>
+          </div>
+
+          {orgs.length > 1 && (
+            <div className="orgbar" style={{ marginBottom: "28px" }}>
+              <span style={{ color: "var(--muted)", fontSize: "13px", fontWeight: 600, marginRight: "12px" }}>Espace d&apos;organisation :</span>
+              <div style={{ display: "inline-flex", gap: "8px" }}>
+                {orgs.map((o, i) => (
+                  <button 
+                    key={o.organizationId} 
+                    className={`orgtab ${i === orgIdx ? "orgtab--on" : ""}`} 
+                    onClick={() => handleOrgChange(i)}
+                    style={{ fontSize: "13.5px", padding: "6px 14px", borderRadius: "10px" }}
+                  >
+                    {o.shortName}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ background: "#fafafa", borderRadius: "20px", padding: "24px", border: "1px solid var(--line)" }}>
+            <h2 style={{ fontSize: "18px", margin: "0 0 16px", fontWeight: 700, color: "var(--brand-ink)", display: "flex", alignItems: "center", gap: "8px" }}>
+              🚀 Mes Applications Actives
+            </h2>
+            {mine.length === 0 ? (
+              <p style={{ color: "var(--muted)", fontSize: "14px" }}>Aucune plateforme active pour cette organisation.</p>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "16px" }}>
+                {mine.map((pl: Platform) => (
+                  <a 
+                    key={pl.code} 
+                    className="tile" 
+                    href={pl.url} 
+                    onClick={(e) => handlePlatformClick(e, pl)}
+                    style={{ 
+                      ["--hue" as string]: pl.hue,
+                      padding: "16px",
+                      borderRadius: "14px",
+                      background: "#fff",
+                      border: "1px solid var(--line)",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      minHeight: "160px",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    <div>
+                      <div className="tile__ic" style={{ width: "48px", height: "48px", borderRadius: "10px", overflow: "hidden", display: "grid", placeItems: "center" }}>
+                        <PlatformIcon icon={pl.icon} name={pl.name} />
+                      </div>
+                      <div className="tile__nm" style={{ fontSize: "15px", fontWeight: 700, margin: "12px 0 2px" }}>{pl.name}</div>
+                      <div className="tile__tg" style={{ fontSize: "12px", color: "var(--muted)" }}>{pl.tagline}</div>
+                    </div>
+                    <div className="tile__go" style={{ fontSize: "12px", marginTop: "12px", color: "var(--hue, var(--violet))" }}>Lancer en SSO →</div>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {discover.length > 0 && (
+            <div style={{ marginTop: "32px", background: "#fff", borderRadius: "20px", padding: "24px", border: "1px solid var(--line)" }}>
+              <h2 style={{ fontSize: "17px", margin: "0 0 4px", fontWeight: 700, color: "var(--brand-ink)" }}>
+                🌟 Services Complémentaires
+              </h2>
+              <p style={{ color: "var(--muted)", fontSize: "13px", marginBottom: "16px" }}>
+                Services disponibles sur Yowyob non activés pour {org.shortName}.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "12px" }}>
+                {discover.map((pl) => (
+                  <div key={pl.code} className="scard scard--muted" style={{ padding: "14px", borderRadius: "12px", border: "1px solid var(--line)", display: "flex", gap: "12px", alignItems: "center" }}>
+                    <div className="scard__ic" style={{ width: "36px", height: "36px", borderRadius: "8px", overflow: "hidden", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                      <PlatformIcon icon={pl.icon} name={pl.name} />
+                    </div>
+                    <div>
+                      <div className="scard__nm" style={{ fontSize: "13.5px", fontWeight: 700, margin: 0 }}>{pl.name}</div>
+                      <div className="scard__tg" style={{ fontSize: "11px", color: "var(--muted)" }}>{pl.tagline}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {orgs.length > 1 && (
-          <div className="orgbar">
-            <span style={{ color: "var(--muted)", fontSize: 13 }}>Organisation active :</span>
-            {orgs.map((o, i) => (
-              <button 
-                key={o.organizationId} 
-                className={`orgtab ${i === orgIdx ? "orgtab--on" : ""}`} 
-                onClick={() => handleOrgChange(i)}
-              >
-                🏢 {o.shortName}
-              </button>
-            ))}
-          </div>
-        )}
-        {orgs.length === 1 && (
-          <div className="orgbar"><span className="orgtab orgtab--on">🏢 {org.shortName}</span></div>
-        )}
-
-        <h2 style={{ fontSize: 18, margin: "18px 0 12px" }}>Mes plateformes</h2>
-        {mine.length === 0 ? (
-          <p style={{ color: "var(--muted)" }}>Aucune plateforme active pour cette organisation.</p>
-        ) : (
-          <div className="grid">
-            {mine.map((pl: Platform) => (
-              <a 
-                key={pl.code} 
-                className="tile" 
-                href={pl.url} 
-                onClick={(e) => handlePlatformClick(e, pl)}
-                style={{ ["--hue" as string]: pl.hue }}
-              >
-                <div className="tile__ic" style={{ overflow: "hidden" }}>
-                  <PlatformIcon icon={pl.icon} name={pl.name} />
-                </div>
-                <div className="tile__nm">{pl.name}</div>
-                <div className="tile__tg">{pl.tagline}</div>
-                <div className="tile__go">Lancer en SSO →</div>
-              </a>
-            ))}
-          </div>
-        )}
-
-        {discover.length > 0 && (
-          <>
-            <h2 style={{ fontSize: 18, margin: "34px 0 12px" }}>Découvrir</h2>
-            <p style={{ color: "var(--muted)", marginTop: -6, marginBottom: 14, fontSize: 14 }}>Services disponibles sur Yowyob (non activés pour cette organisation).</p>
-            <div className="grid">
-              {discover.map((pl) => (
-                <div key={pl.code} className="scard scard--muted">
-                  <div className="scard__ic" style={{ background: `color-mix(in srgb, ${pl.hue} 12%, #fff)`, overflow: "hidden" }}>
-                    <PlatformIcon icon={pl.icon} name={pl.name} />
-                  </div>
-                  <div className="scard__nm">{pl.name}</div>
-                  <div className="scard__tg">{pl.tagline}</div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* PROFILE & SECURITY CONTROL CENTER */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginTop: "34px" }}>
-          
-          {/* SECURITY & MFA PANEL */}
-          <div className="sess">
-            <h3>🔑 Sécurité & MFA</h3>
-            <div style={{ margin: "10px 0" }}>
-              <span className={`pill ${mfaActive ? "pill--ok" : ""}`} style={{ 
-                background: mfaActive ? "#ecfdf5" : "#fef2f2", 
-                color: mfaActive ? "#065f46" : "#991b1b",
-                borderColor: mfaActive ? "#a7f3d0" : "#fecaca" 
-              }}>
-                <span className="dot" style={{ background: mfaActive ? "#10b981" : "#ef4444" }} />
-                Double Authentification (MFA) : {mfaActive ? "ACTIVÉ" : "DÉSACTIVÉ"}
+        {/* RIGHT COLUMN: profile and security details */}
+        <div>
+          <div className="sess" style={{ padding: "20px", borderRadius: "16px", border: "1px solid var(--line)", background: "#fff", position: "sticky", top: "20px" }}>
+            
+            {/* PROFILE HEAD */}
+            <div style={{ textAlign: "center", borderBottom: "1px solid var(--line)", paddingBottom: "20px", marginBottom: "20px" }}>
+              <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "var(--indigo-soft)", color: "var(--indigo)", fontSize: "28px", fontWeight: 700, display: "grid", placeItems: "center", margin: "0 auto 12px" }}>
+                {initial}
+              </div>
+              <h3 style={{ fontSize: "16px", margin: "0 0 4px" }}>{p.username}</h3>
+              <span className="pill pill--ok" style={{ fontSize: "11px", textTransform: "none", padding: "2px 8px" }}>
+                Compte {p.status}
               </span>
             </div>
 
-            {mfaSetupStep === "idle" ? (
-              <div style={{ marginTop: "14px" }}>
-                {!mfaActive ? (
-                  <button 
-                    onClick={handleStartEnableMfa} 
-                    className="btn btn-orange" 
-                    disabled={mfaBusy}
-                    style={{ fontSize: "13px", padding: "8px 14px" }}
-                  >
-                    {mfaBusy ? "Chargement..." : "Activer la double authentification"}
-                  </button>
-                ) : (
-                  <button 
-                    onClick={handleDisableMfa} 
-                    className="btn btn-outline" 
-                    disabled={mfaBusy}
-                    style={{ fontSize: "13px", padding: "8px 14px", color: "#b91c1c", borderColor: "#fecaca" }}
-                  >
-                    {mfaBusy ? "Chargement..." : "Désactiver la double authentification"}
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div style={{ marginTop: "14px", borderTop: "1px solid var(--line)", paddingTop: "14px" }}>
-                <p style={{ fontSize: "13px", color: "var(--ink-soft)", margin: "0 0 10px" }}>
-                  📧 Un code OTP a été généré pour valider l&apos;activation.
-                </p>
-                {mfaSetupCodePreview && (
-                  <div className="alert alert--ok" style={{ marginBottom: "12px", padding: "8px 10px", fontSize: "12px" }}>
-                    <strong>Mode Démo :</strong> Code OTP reçu : <code>{mfaSetupCodePreview}</code>
-                  </div>
-                )}
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <input 
-                    type="text" 
-                    className="input" 
-                    value={mfaSetupCode} 
-                    onChange={(e) => setMfaSetupCode(e.target.value)} 
-                    placeholder="Entrez le code"
-                    style={{ padding: "8px 10px", fontSize: "13.5px", width: "150px" }}
-                  />
-                  <button onClick={handleConfirmMfa} className="btn btn-orange" style={{ padding: "8px 14px", fontSize: "13px" }} disabled={mfaBusy}>
-                    Valider
-                  </button>
-                  <button onClick={() => { setMfaSetupStep("idle"); setMfaSetupCode(""); }} className="btn btn-ghost" style={{ padding: "8px 14px", fontSize: "13px" }}>
-                    Annuler
-                  </button>
-                </div>
-              </div>
-            )}
-            {mfaError && <p className="alert alert--err" style={{ marginTop: "12px", fontSize: "12.5px", padding: "8px 10px" }}>{mfaError}</p>}
-          </div>
-
-          {/* PROFILE PLAN PANEL */}
-          <div className="sess">
-            <h3>📊 Abonnement & Profil</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "10px" }}>
-              <div>
-                <span style={{ fontSize: "13px", color: "var(--muted)" }}>Plan actuel :</span>
-                <span className="pill" style={{ marginLeft: "8px", textTransform: "uppercase", fontWeight: 700 }}>
+            {/* ABONNEMENT SECTION */}
+            <div style={{ marginBottom: "20px" }}>
+              <h4 style={{ fontSize: "12px", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 8px", letterSpacing: "0.05em" }}>
+                Abonnement
+              </h4>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--violet-soft)", padding: "10px 14px", borderRadius: "10px", marginBottom: "10px" }}>
+                <span style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--brand-ink)" }}>Plan actuel</span>
+                <span className="pill" style={{ background: currentPlan === "ENTERPRISE" ? "linear-gradient(135deg, #7c3aed, #db2777)" : currentPlan === "PREMIUM" ? "var(--indigo)" : "var(--muted)", color: "#fff", border: "none", fontSize: "11px", fontWeight: 800 }}>
                   {currentPlan}
                 </span>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "8px" }}>
-                <label style={{ fontSize: "13px", color: "var(--ink-soft)" }} htmlFor="plan-select">Changer de plan :</label>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label htmlFor="plan-select" style={{ fontSize: "11.5px", color: "var(--muted)" }}>Changer d&apos;abonnement :</label>
                 <select 
                   id="plan-select"
                   className="input" 
                   value={currentPlan} 
                   onChange={(e) => handlePlanChange(e.target.value)}
                   disabled={updatingPlan}
-                  style={{ width: "auto", padding: "6px 12px", borderRadius: "8px", fontSize: "13.5px" }}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", fontSize: "13px" }}
                 >
                   <option value="FREE">Gratuit (FREE)</option>
                   <option value="PREMIUM">Professionnel (PREMIUM)</option>
-                  <option value="ENTERPRISE">Grande Entreprise (ENTERPRISE)</option>
+                  <option value="ENTERPRISE">Entreprise (ENTERPRISE)</option>
                 </select>
               </div>
             </div>
+
+            {/* SECURITE & MFA SECTION */}
+            <div style={{ marginBottom: "20px", borderTop: "1px solid var(--line)", paddingTop: "20px" }}>
+              <h4 style={{ fontSize: "12px", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 8px", letterSpacing: "0.05em" }}>
+                Sécurité
+              </h4>
+              <div style={{ margin: "10px 0" }}>
+                <span className={`pill ${mfaActive ? "pill--ok" : ""}`} style={{ 
+                  width: "100%",
+                  justifyContent: "center",
+                  background: mfaActive ? "#ecfdf5" : "#fef2f2", 
+                  color: mfaActive ? "#065f46" : "#991b1b",
+                  borderColor: mfaActive ? "#a7f3d0" : "#fecaca" 
+                }}>
+                  <span className="dot" style={{ background: mfaActive ? "#10b981" : "#ef4444" }} />
+                  Double Authentification (MFA) : {mfaActive ? "Actif" : "Inactif"}
+                </span>
+              </div>
+
+              {mfaSetupStep === "idle" ? (
+                <div style={{ marginTop: "10px" }}>
+                  {!mfaActive ? (
+                    <button 
+                      onClick={handleStartEnableMfa} 
+                      className="btn btn-orange" 
+                      disabled={mfaBusy}
+                      style={{ fontSize: "12.5px", padding: "8px 12px", width: "100%" }}
+                    >
+                      {mfaBusy ? "Chargement..." : "Activer le MFA"}
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={handleDisableMfa} 
+                      className="btn btn-outline" 
+                      disabled={mfaBusy}
+                      style={{ fontSize: "12.5px", padding: "8px 12px", width: "100%", color: "#b91c1c", borderColor: "#fecaca" }}
+                    >
+                      {mfaBusy ? "Chargement..." : "Désactiver le MFA"}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div style={{ marginTop: "12px", border: "1px solid #ffd8a8", background: "#fff9db", borderRadius: "10px", padding: "12px" }}>
+                  <p style={{ fontSize: "12px", color: "#d9480f", margin: "0 0 8px", fontWeight: 600 }}>
+                    📧 Validation requise :
+                  </p>
+                  {mfaSetupCodePreview && (
+                    <div className="alert alert--ok" style={{ marginBottom: "10px", padding: "6px 8px", fontSize: "11.5px" }}>
+                      Code OTP : <code>{mfaSetupCodePreview}</code>
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    <input 
+                      type="text" 
+                      className="input" 
+                      value={mfaSetupCode} 
+                      onChange={(e) => setMfaSetupCode(e.target.value)} 
+                      placeholder="Code OTP"
+                      style={{ padding: "6px 8px", fontSize: "12px", flexGrow: 1 }}
+                    />
+                    <button onClick={handleConfirmMfa} className="btn btn-orange" style={{ padding: "6px 10px", fontSize: "12px" }} disabled={mfaBusy}>
+                      Ok
+                    </button>
+                  </div>
+                  <button onClick={() => { setMfaSetupStep("idle"); setMfaSetupCode(""); }} className="btn btn-ghost" style={{ fontSize: "11px", padding: "4px 0", marginTop: "6px", width: "100%", textAlign: "center" }}>
+                    Annuler
+                  </button>
+                </div>
+              )}
+              {mfaError && <p className="alert alert--err" style={{ marginTop: "10px", fontSize: "12px", padding: "6px 8px" }}>{mfaError}</p>}
+            </div>
+
+            {/* DETAILS DE LA SESSION */}
+            <div style={{ borderTop: "1px solid var(--line)", paddingTop: "20px" }}>
+              <h4 style={{ fontSize: "12px", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 8px", letterSpacing: "0.05em" }}>
+                Session & Droits
+              </h4>
+              <p style={{ fontSize: "12px", color: "var(--ink-soft)", margin: "0 0 10px" }}>
+                <strong>Tenant :</strong> <code style={{ fontSize: "11px" }}>{p.tenantId}</code>
+              </p>
+              
+              {claims && Array.isArray(claims.permissions) && (
+                <div style={{ marginBottom: "14px" }}>
+                  <div style={{ fontSize: "11.5px", fontWeight: 600, color: "var(--muted)", marginBottom: "6px" }}>Permissions (claims JWT) :</div>
+                  <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", maxHeight: "100px", overflowY: "auto", border: "1px solid var(--line)", padding: "8px", borderRadius: "8px", background: "#fcfcfc" }}>
+                    {(claims.permissions as string[]).map((perm) => (
+                      <span key={perm} className="pill" style={{ textTransform: "none", fontSize: "10px", padding: "2px 6px", background: "var(--violet-soft)", color: "var(--brand-ink)", borderColor: "#e6ddff" }}>
+                        {perm}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button 
+                className="btn btn-outline" 
+                style={{ fontSize: "12px", padding: "8px 12px", width: "100%", display: "flex", justifyContent: "center", gap: "6px" }} 
+                onClick={() => setShowSession((v) => !v)}
+              >
+                🖥️ {showSession ? "Masquer JWT" : "Inspecter le JWT"}
+              </button>
+
+              {showSession && (
+                <div style={{ marginTop: "12px", overflow: "hidden", borderRadius: "10px" }}>
+                  <pre className="jwt" style={{ fontSize: "10.5px", maxHeight: "160px", overflowY: "auto", margin: 0 }}>
+                    {JSON.stringify(claims, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
 
-        {/* SESSION INFORMATION */}
-        <div className="sess" style={{ marginTop: "20px" }}>
-          <h3 style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            Ma session (Profil & Claims JWT)
-            <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setShowSession((v) => !v)}>
-              {showSession ? "masquer les détails" : "afficher les détails"}
-            </button>
-          </h3>
-          <dl className="kv">
-            <dt>Email</dt><dd>{p.email}</dd>
-            <dt>Statut</dt><dd>{p.status}</dd>
-            <dt>Tenant</dt><dd>{p.tenantId}</dd>
-            {claims && Array.isArray(claims.permissions) && (
-              <>
-                <dt>Privilèges / Rôles</dt>
-                <dd style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                  {(claims.permissions as string[]).map((perm) => (
-                    <span key={perm} className="pill" style={{ textTransform: "none", fontSize: "11px", padding: "3px 8px", background: "var(--violet-soft)", color: "var(--brand-ink)", borderColor: "#e6ddff" }}>
-                      {perm}
-                    </span>
-                  ))}
-                </dd>
-              </>
-            )}
-          </dl>
-          {showSession && <pre className="jwt">{JSON.stringify(claims, null, 2)}</pre>}
-        </div>
       </section>
 
       {/* SSO SIMULATION MODAL */}
