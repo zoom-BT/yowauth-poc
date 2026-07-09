@@ -6,6 +6,25 @@ import { decodeJwt, type Session, selectContext, updatePlan, enableMfa, confirmM
 import { useSession, saveSession } from "./lib/session";
 import { PLATFORMS, accessiblePlatforms, otherPlatforms, type Platform } from "./lib/platforms";
 
+function PlatformIcon({ icon, name, className }: { icon: string; name: string; className?: string }) {
+  if (icon.startsWith("http")) {
+    return (
+      <img
+        src={icon}
+        alt={name}
+        className={className}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          borderRadius: "inherit"
+        }}
+      />
+    );
+  }
+  return <span style={{ fontSize: "inherit" }}>{icon}</span>;
+}
+
 function Logo() {
   return (
     <Link href="/" className="logo" style={{ textDecoration: "none", color: "inherit" }}>
@@ -63,7 +82,12 @@ function Landing() {
           <div className="preview__bar"><i className="r" /><i className="y" /><i className="g" /><span>mes plateformes</span></div>
           <div className="preview__grid">
             {PLATFORMS.slice(0, 9).map((p) => (
-              <div key={p.code} className="ptile"><div className="ic">{p.icon}</div><div className="nm">{p.name}</div></div>
+              <div key={p.code} className="ptile">
+                <div className="ic" style={{ width: "32px", height: "32px", margin: "0 auto", borderRadius: "8px", overflow: "hidden", display: "grid", placeItems: "center" }}>
+                  <PlatformIcon icon={p.icon} name={p.name} />
+                </div>
+                <div className="nm">{p.name}</div>
+              </div>
             ))}
           </div>
         </div>
@@ -77,7 +101,9 @@ function Landing() {
         <div className="grid">
           {PLATFORMS.map((p) => (
             <div key={p.code} className="scard">
-              <div className="scard__ic" style={{ background: `color-mix(in srgb, ${p.hue} 14%, #fff)` }}>{p.icon}</div>
+              <div className="scard__ic" style={{ background: `color-mix(in srgb, ${p.hue} 14%, #fff)`, overflow: "hidden" }}>
+                <PlatformIcon icon={p.icon} name={p.name} />
+              </div>
               <div className="scard__nm">{p.name}</div>
               <div className="scard__tg">{p.tagline}</div>
             </div>
@@ -350,7 +376,9 @@ function Launcher({ session }: { session: Session }) {
                 onClick={(e) => handlePlatformClick(e, pl)}
                 style={{ ["--hue" as string]: pl.hue }}
               >
-                <div className="tile__ic">{pl.icon}</div>
+                <div className="tile__ic" style={{ overflow: "hidden" }}>
+                  <PlatformIcon icon={pl.icon} name={pl.name} />
+                </div>
                 <div className="tile__nm">{pl.name}</div>
                 <div className="tile__tg">{pl.tagline}</div>
                 <div className="tile__go">Lancer en SSO →</div>
@@ -366,7 +394,9 @@ function Launcher({ session }: { session: Session }) {
             <div className="grid">
               {discover.map((pl) => (
                 <div key={pl.code} className="scard scard--muted">
-                  <div className="scard__ic" style={{ background: `color-mix(in srgb, ${pl.hue} 12%, #fff)` }}>{pl.icon}</div>
+                  <div className="scard__ic" style={{ background: `color-mix(in srgb, ${pl.hue} 12%, #fff)`, overflow: "hidden" }}>
+                    <PlatformIcon icon={pl.icon} name={pl.name} />
+                  </div>
                   <div className="scard__nm">{pl.name}</div>
                   <div className="scard__tg">{pl.tagline}</div>
                 </div>
@@ -516,7 +546,9 @@ function Launcher({ session }: { session: Session }) {
         }}>
           <div className="authcard" style={{ maxWidth: "550px", width: "90%" }}>
             <div style={{ textAlign: "center", marginBottom: "16px" }}>
-              <div style={{ fontSize: "40px", marginBottom: "10px" }}>{ssoPlatform.icon}</div>
+              <div style={{ fontSize: "40px", marginBottom: "10px", width: "64px", height: "64px", margin: "0 auto 10px", borderRadius: "14px", overflow: "hidden", display: "grid", placeItems: "center" }}>
+                <PlatformIcon icon={ssoPlatform.icon} name={ssoPlatform.name} />
+              </div>
               <h3>SSO : Lancement de {ssoPlatform.name}</h3>
               <p style={{ color: "var(--muted)", fontSize: "13.5px", margin: "4px 0 0" }}>
                 Simulation d&apos;authentification unique (OIDC Token-Exchange)
