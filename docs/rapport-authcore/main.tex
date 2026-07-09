@@ -1,0 +1,671 @@
+%=====================================================================
+%  RT-Comops Backend — Rapport d'Analyse & Conception
+%  Module : auth-core (YowAuth)
+%  Style aligné sur le Cahier de Conception RT-Comops (ConceptionKernel V3)
+%  Compilable sur Overleaf (pdfLaTeX).  Encodage UTF-8.
+%=====================================================================
+\documentclass[11pt,a4paper,oneside]{report}
+
+%---------------------------------------------------------------------
+% Encodage & langue
+%---------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[french]{babel}
+\usepackage{microtype}
+
+%---------------------------------------------------------------------
+% Mise en page
+%---------------------------------------------------------------------
+\usepackage[a4paper,margin=2.5cm,headheight=15pt]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage[most]{tcolorbox}
+\usepackage{listings}
+\usepackage{hyperref}
+
+%---------------------------------------------------------------------
+% Charte de couleurs (bleu marine du cahier)
+%---------------------------------------------------------------------
+\definecolor{rtnavy}{HTML}{1F3A5F}
+\definecolor{rtgray}{HTML}{6B7280}
+\definecolor{rtlight}{HTML}{EEF2F7}
+\definecolor{rtcode}{HTML}{0B1021}
+\definecolor{rtaccent}{HTML}{2563EB}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=rtnavy,
+  urlcolor=rtaccent,
+  citecolor=rtnavy,
+  pdftitle={RT-Comops Backend — Rapport d'Analyse et Conception — auth-core},
+  pdfauthor={Tchoutzine}
+}
+
+%---------------------------------------------------------------------
+% En-têtes / pieds de page
+%---------------------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\itshape\leftmark}
+\fancyhead[R]{\small\thepage}
+\fancyfoot[C]{\small\color{rtgray}RT-Comops — Rapport d'Analyse \& Conception — \texttt{auth-core}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+%---------------------------------------------------------------------
+% Titres de chapitres / sections
+%---------------------------------------------------------------------
+\titleformat{\chapter}[display]
+  {\normalfont\huge\bfseries\color{rtnavy}}
+  {\filright\Large Chapitre~\thechapter}{0.6ex}{\Huge}
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{rtnavy}}{\thesection}{1em}{}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{rtnavy!85}}{\thesubsection}{1em}{}
+
+%---------------------------------------------------------------------
+% Boîtes thématiques
+%---------------------------------------------------------------------
+\newtcolorbox{rolebox}[1][]{
+  colback=rtlight, colframe=rtnavy, boxrule=0.8pt, arc=2pt,
+  left=8pt,right=8pt,top=6pt,bottom=6pt, #1}
+
+\newtcolorbox{invbox}[1][Invariants]{
+  enhanced, colback=white, colframe=rtnavy!70, boxrule=0.6pt, arc=1pt,
+  title=#1, coltitle=white, colbacktitle=rtnavy,
+  fonttitle=\bfseries, left=8pt,right=8pt,top=6pt,bottom=6pt}
+
+\newtcolorbox{notebox}{
+  colback=rtlight!60, colframe=rtaccent, boxrule=0pt,
+  leftrule=3pt, arc=0pt, left=8pt,right=8pt,top=5pt,bottom=5pt}
+
+%---------------------------------------------------------------------
+% Listings (JSON / bash)
+%---------------------------------------------------------------------
+\lstdefinestyle{shell}{
+  backgroundcolor=\color{rtcode}, basicstyle=\ttfamily\scriptsize\color{white},
+  breaklines=true, columns=fullflexible, frame=none,
+  keywordstyle=\color{cyan}, stringstyle=\color{green!60!white},
+  showstringspaces=false, xleftmargin=6pt, xrightmargin=6pt,
+  framexleftmargin=6pt, aboveskip=8pt, belowskip=8pt}
+\lstset{style=shell}
+
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\httpget}{\textcolor{white}{\colorbox{rtaccent}{\scriptsize\ttfamily\,GET\,}}}
+\newcommand{\httppost}{\textcolor{white}{\colorbox{green!45!black}{\scriptsize\ttfamily\,POST\,}}}
+\newcommand{\httpput}{\textcolor{white}{\colorbox{orange!80!black}{\scriptsize\ttfamily\,PUT\,}}}
+
+%=====================================================================
+\begin{document}
+%=====================================================================
+
+%--------------------------- Page de titre ---------------------------
+\begin{titlepage}
+\centering
+\vspace*{2.2cm}
+{\color{rtnavy}\rule{\linewidth}{2pt}}\\[0.6cm]
+{\Huge\bfseries\color{rtnavy} RT-Comops Backend\par}
+\vspace{0.4cm}
+{\LARGE Rapport d'Analyse \& Conception\par}
+\vspace{0.2cm}
+{\Large\itshape Module \texttt{auth-core} — YowAuth\par}
+\vspace{0.3cm}
+{\large Fournisseur d'identité (IdP) central — ConceptionKernel V3\par}
+\vspace{0.8cm}
+{\color{rtnavy}\rule{\linewidth}{0.8pt}}\\[1.2cm]
+
+\begin{tabular}{rl}
+\textbf{Module}      & Identité \& Accès — \texttt{auth-core}\\[2pt]
+\textbf{Auteur}      & Tchoutzine\\[2pt]
+\textbf{Cours}       & Réseaux Intelligents — Master\\[2pt]
+\textbf{Périmètre}   & Comptes utilisateurs, authentification, OIDC\\[2pt]
+\textbf{Signature}   & JWT \textbf{RS256} — JWKS public\\[2pt]
+\end{tabular}
+
+\vfill
+{\large\bfseries Cahier d'Analyse Technique\par}
+\vspace{0.4cm}
+{\color{rtgray}\small Document de référence pour la conception, le développement et l'évolution du module d'authentification.}
+\vspace{1.5cm}
+\end{titlepage}
+
+%--------------------------- Table des matières ----------------------
+\pagenumbering{roman}
+\tableofcontents
+\cleardoublepage
+\pagenumbering{arabic}
+
+%=====================================================================
+\chapter{Introduction}
+%=====================================================================
+\section{Objet du document}
+Ce rapport décrit l'analyse et la conception du module \textbf{\code{auth-core}} (nommé
+\emph{YowAuth}) de la plateforme RT-Comops Backend. Il constitue le document de référence
+technique et fonctionnelle du sous-système d'authentification : modèle de domaine, ports et
+adaptateurs, cas d'usage, diagrammes de séquence, invariants métier, surface d'API exposée,
+mécanismes de sécurité (JWT RS256, JWKS, OIDC) et stratégie de vérification.
+
+Le document suit les mêmes conventions que le cahier d'analyse global RT-Comops : pour le
+core étudié sont fournis la description détaillée, les rôles primaire et secondaires, le
+diagramme de classes, le diagramme des cas d'utilisation et un ensemble de diagrammes de
+séquence couvrant les interactions techniques les plus significatives.
+
+\section{Positionnement d'auth-core dans le kernel}
+La plateforme est un \textbf{monolithe modulaire à architecture hexagonale}, organisé en
+une vingtaine de \emph{cores} fonctionnels plus un module \code{bootstrap} exécutable.
+\code{auth-core} appartient au domaine \emph{Identité \& Accès}, aux côtés de
+\code{actor-core} (identités humaines) et \code{roles-core} (RBAC).
+
+\begin{rolebox}
+\code{auth-core} sépare clairement l'\textbf{identité humaine} (\code{Actor}, gérée par
+\code{actor-core}) du \textbf{compte technique} (\code{UserAccount}) utilisé pour
+s'authentifier et porter un contexte utilisateur dans les appels au kernel. La signature
+RS256 des JWT et l'exposition du JWKS restent portées par \code{kernel-core} ;
+\code{auth-core} orchestre l'émission, la sélection de contexte, les challenges de sécurité
+et l'exposition OIDC après authentification réussie et résolution des permissions.
+\end{rolebox}
+
+\section{Périmètre fonctionnel}
+Le module couvre le cycle IAM complet attendu d'un fournisseur d'identité first-party :
+\begin{itemize}[leftmargin=1.4em,itemsep=1pt]
+  \item création et cycle de vie des comptes \code{UserAccount} ;
+  \item authentification locale tenant-scoped et découverte globale de contextes ;
+  \item sélection de contexte tenant/organisation ;
+  \item émission d'un \textbf{JWT d'accès RS256} enrichi des permissions ;
+  \item self-service utilisateur (\code{/users/me}, plan, onboarding) ;
+  \item flux de challenge et durcissement (CAPTCHA, OTP, MFA, vérification email/téléphone) ;
+  \item réinitialisation de mot de passe (SMTP ou mode \code{PREVIEW\_ONLY}) ;
+  \item provider \textbf{OIDC/OAuth2} central (métadonnées, token-exchange, userinfo, introspection, JWKS) ;
+  \item projection des \textbf{organisations accessibles} et de leurs services effectifs.
+\end{itemize}
+
+%=====================================================================
+\chapter{Description et rôles du core}
+%=====================================================================
+\section{Description du core}
+L'\code{auth-core} est le module responsable des comptes utilisateurs et de
+l'authentification locale. Il expose désormais un flux HTTP en variantes complémentaires
+couvrant le cycle complet IAM :
+\begin{itemize}[leftmargin=1.4em,itemsep=1pt]
+  \item le flux historique \httppost~\code{/api/auth/login}, tenant-scoped, qui suppose un \code{X-Tenant-Id} connu ;
+  \item le flux \emph{email-first} \httppost~\code{/api/auth/identify}, qui détermine si le principal doit poursuivre vers \code{SIGN\_IN\_PASSWORD} ou \code{SIGN\_UP} ;
+  \item le flux moderne \httppost~\code{/api/auth/discover-contexts} puis \httppost~\code{/api/auth/select-context}, permettant un login global par principal/password avant sélection du contexte tenant/organisation ;
+  \item les flux de self-service : \code{discover-sign-up-contexts}, \code{sign-up}, \code{forgot-password}, \code{password-reset/issue}, \code{reset-password}, \code{email-verification/*} ;
+  \item les flux de challenge : \code{captcha}, \code{otp}, \code{phone-verification/*}, \code{mfa/*}, \code{login/mfa/confirm} ;
+  \item le provider OIDC central : \code{/.well-known/openid-configuration}, \code{/.well-known/oauth-authorization-server}, \code{/oauth2/token}, \code{/oauth2/userinfo}, \code{/oauth2/introspect}, \code{/.well-known/jwks.json}.
+\end{itemize}
+
+\begin{notebox}
+\textbf{Note.} Le backend ne possède pas encore de catalogue métier des tenants avec nom
+d'affichage. Le flux de découverte de contexte retourne donc des \code{tenantId} techniques,
+accompagnés des organisations accessibles dans chacun de ces contextes.
+\end{notebox}
+
+\section{Rôle principal}
+\begin{rolebox}
+\textbf{Rôle principal :} gérer le cycle de vie des comptes \code{UserAccount}, assurer
+l'authentification locale dans un contexte tenant donné ou via une découverte globale de
+contextes, puis retourner un JWT d'accès signé contenant l'identité utilisateur, le contexte
+sélectionné et les permissions résolues.
+\end{rolebox}
+
+\section{Rôles secondaires}
+\begin{enumerate}[leftmargin=1.6em,itemsep=2pt]
+  \item \textbf{Création contrôlée des comptes.} \httppost~\code{/api/auth/register} est
+  réservé aux appels authentifiés portés par une \code{ClientApplication} et un utilisateur
+  disposant des permissions IAM (\code{system:admin} / \code{iam:admin}). Les identifiants
+  sont normalisés et le mot de passe haché (\code{BCryptPasswordEncoder}) avant persistance.
+  \item \textbf{Authentification locale.} Deux parcours : \code{/login} (résolution d'un
+  compte par principal dans un tenant, puis vérification du mot de passe) et
+  \code{/discover-contexts} (résolution globale, filtrage par mot de passe valide, émission
+  d'un jeton court de sélection de contexte).
+  \item \textbf{Sélection de contexte tenant/organisation.} \code{/select-context} consomme
+  le jeton court, valide le \code{contextId} et l'appartenance à l'organisation, puis émet le
+  JWT final portant \code{tenantId} et éventuellement \code{organizationId}.
+  \item \textbf{Émission d'un JWT d'accès RS256.} Après authentification, \code{auth-core}
+  résout les permissions puis délègue au \code{UserSessionTokenService} de \code{kernel-core}
+  l'émission du bearer token RS256.
+  \item \textbf{Auto-service utilisateur.} \code{GET /api/users/me}, \code{PUT
+  /users/me/plan}, \code{PUT /users/me/onboarding}, \code{PUT /users/me/identity-onboarding}.
+  Le profil retourne aussi \code{organizations[]} et, pour chaque organisation, les services
+  effectivement disponibles.
+  \item \textbf{Projection des entitlements organisationnels.} \code{auth-core} interroge
+  \code{organization-core} pour agréger les organisations accessibles et leurs services
+  effectifs, permettant au frontend d'afficher/masquer les modules métier.
+  \item \textbf{Compatibilité ascendante.} Le flux historique \code{/login} est conservé pour
+  les consommateurs connaissant déjà le \code{tenantId}.
+  \item \textbf{Journalisation applicative.} Les opérations sensibles
+  (\code{USER\_REGISTERED}, \code{USER\_SIGNED\_UP}, \code{USER\_LOGIN},
+  \code{USER\_PASSWORD\_RESET\_*}, \code{USER\_EMAIL\_VERIFICATION\_*},
+  \code{USER\_PLAN\_UPDATED}, \code{USER\_ONBOARDING\_UPDATED}) sont inscrites dans l'audit
+  système via \code{kernel-core}.
+  \item \textbf{Inscription contextuelle sans tenant explicite.} Via
+  \code{discover-sign-up-contexts} avec un \code{organizationCode} : le résultat inclut un
+  \code{selectionToken} signé et un ou plusieurs \code{contextId} réutilisables par
+  \code{sign-up}.
+  \item \textbf{Réinitialisation de mot de passe.} \code{forgot-password} résout tous les
+  comptes correspondant à un principal, émet un jeton court de sélection ; puis
+  \code{password-reset/issue} produit un jeton signé de reset. Si un provider SMTP est
+  configuré, l'email est envoyé ; sinon, mode explicite \code{PREVIEW\_ONLY}.
+  \item \textbf{Vérification d'adresse email.} \code{email-verification/request} émet un jeton
+  signé associé à l'utilisateur ; \code{email-verification/confirm} valide ce jeton et
+  renseigne \code{emailVerifiedAt}.
+  \item \textbf{OTP, téléphone et MFA.} Challenges OTP (email / SMS / WhatsApp),
+  \code{phone-verification/*}, activation MFA en deux temps puis exigence de
+  \code{login/mfa/confirm} aux connexions suivantes.
+  \item \textbf{CAPTCHA et anti-abus.} \code{captcha} génère un challenge court,
+  \code{captcha/verify} produit un jeton réutilisable par \code{sign-up}.
+  \item \textbf{Provider OIDC central.} Métadonnées OIDC/OAuth2, échange de jeton
+  (\code{token-exchange}), \code{userinfo}, \code{introspect}, adossés au JWKS RS256 du kernel.
+\end{enumerate}
+
+%=====================================================================
+\chapter{Architecture hexagonale du module}
+%=====================================================================
+\section{Structure interne}
+Le module suit la structure hexagonale canonique. Le domaine ne connaît ni le web ni la
+base : il ne parle qu'à des interfaces (ports).
+
+\begin{center}
+\begin{tabular}{@{}p{5.2cm}p{8.6cm}@{}}
+\toprule
+\textbf{Couche / package} & \textbf{Contenu}\\
+\midrule
+\code{domain.model} & Agrégat \code{UserAccount}, invariants métier, énumérations de statut.\\
+\code{application.port.in} & Cas d'usage entrants (\code{LoginUseCase}, \code{RegisterUserUseCase}, \code{PublicSignUpUseCase}, \code{DiscoverLoginContextsUseCase}, \dots).\\
+\code{application.port.out} & Ports sortants : \code{UserAccountRepository}, \code{RefreshTokenRepository}, \code{UserOrganizationAccessDirectory}, \code{SignUpContextDirectory}.\\
+\code{application.service} & Orchestration : \code{AuthApplicationService}, \code{AuthContextApplicationService}, \code{AuthOidcService}, \code{AuthSharedSessionService} et les services de jetons.\\
+\code{adapter.in.web} & Contrôleurs WebFlux (\code{AuthController}, \code{AuthOidcController}, \code{SessionTokensController}) et DTO.\\
+\code{adapter.out.persistence} & \code{UserAccountR2dbcRepositoryAdapter}, \code{InMemoryUserAccountRepository} (\code{@Profile("test-memory")}).\\
+\code{config} & Assemblage Spring, \code{AuthModuleConfiguration}, propriétés (\code{AuthSsoProperties}, \code{AuthEmailProperties}, \code{LoginThrottleProperties}, \code{RefreshTokenProperties}).\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Dépendances et ports sortants}
+\code{auth-core} dépend au compile de \code{common-core}, \code{kernel-core} et
+\code{actor-core}. Trois ports sortants matérialisent les couplages inter-cores, résolus par
+des adaptateurs alternatifs selon l'assemblage :
+
+\begin{center}
+\begin{tabular}{@{}p{5.4cm}p{8.4cm}@{}}
+\toprule
+\textbf{Port sortant} & \textbf{Rôle / implémentation}\\
+\midrule
+\code{UserAccountRepository} & Persistance des comptes (R2DBC en prod, in-memory en test).\\
+\code{RefreshTokenRepository} & Persistance des refresh tokens.\\
+\code{UserOrganizationAccess\allowbreak Directory} & Liste des organisations accessibles d'un user ; adaptateur réel vers \code{organization-core} (via \code{bootstrap}).\\
+\code{SignUpContextDirectory} & Contextes d'inscription par code organisation ; adaptateur réel vers \code{organization-core}.\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{notebox}
+\textbf{Extensibilité.} Les trois ports liés à l'organisation peuvent être servis par des
+adaptateurs de sortie \emph{alternatifs} (par exemple in-memory seedés) sans modifier le
+domaine — propriété exploitée pour extraire et déployer \code{auth-core} de façon isolée
+(chapitre~\ref{chap:poc}).
+\end{notebox}
+
+%=====================================================================
+\chapter{Modèle de domaine}
+%=====================================================================
+\section{Diagramme de classes}
+\begin{figure}[h]
+  \centering
+  % Rendre diagrams/auth-core-class.puml en PNG (voir README) et décommenter :
+  % \includegraphics[width=\linewidth]{figures/auth-core-class.png}
+  \fbox{\parbox{0.95\linewidth}{\centering\vspace{1cm}\itshape\color{rtgray}
+  Diagramme de classes — \code{auth-core}\\[4pt]
+  (image générée depuis \texttt{diagrams/auth-core-class.puml})\vspace{1cm}}}
+  \caption{Diagramme de classes du module auth-core.}
+\end{figure}
+
+\subsection{Agrégat \code{UserAccount}}
+Modèle de domaine immuable représentant un compte utilisateur. Attributs principaux :
+\code{id}, \code{tenantId}, \code{actorId}, \code{username}, \code{email},
+\code{phoneNumber}, \code{passwordHash}, \code{authProvider}, \code{externalSubject},
+\code{status}, \code{plan}, \code{onboardingStatus}, \code{onboardingStep},
+\code{accountType}, \code{businessType}, \code{onboardingPayload}, \code{emailVerified},
+\code{emailVerifiedAt}, \code{phoneVerified}, \code{phoneVerifiedAt}, \code{mfaEnabled},
+\code{mfaChannel}. Chaque mutation retourne un nouvel objet (immuabilité, sûre en réactif) :
+\code{register()}, \code{markEmailVerified()}, \code{enableMfa()}, \code{disableMfa()},
+\code{updatePlan()}, \code{updateOnboarding()}, \code{linkExternalIdentity()},
+\code{updatePassword()}, \code{markPhoneVerified()}.
+
+\subsection{Services de jetons}
+\begin{center}
+\begin{tabular}{@{}p{6.2cm}p{7.6cm}@{}}
+\toprule
+\textbf{Service} & \textbf{Rôle}\\
+\midrule
+\code{AuthSsoSessionTokenService} & « Passeport » SSO après login (contextes multi-tenant embarqués).\\
+\code{AuthSharedSessionService} & Session partagée multi-tenant ; \code{issueForUser()}, \code{userInfo()}.\\
+\code{AuthContextSelectionToken\allowbreak Service} & Jeton court et temporaire de sélection de contexte.\\
+\code{AuthPasswordResetToken\allowbreak Service} & Jetons de réinitialisation de mot de passe.\\
+\code{AuthEmailVerificationToken\allowbreak Service} & Jetons de vérification d'email (TTL 24h).\\
+\code{AuthSignUpSelectionToken\allowbreak Service} & Jetons de sélection de contexte d'inscription.\\
+\code{AuthChallengeTokenService} & OTP et CAPTCHA.\\
+\code{JwtTokenService} (kernel) & Signe/vérifie les JWT RS256 ; charge une clé PEM ou auto-génère une paire RSA en mémoire ; exporte le JWKS public.\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Invariants métier}
+\begin{invbox}[Invariants du auth-core]
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+  \item \code{username} est unique par tenant et normalisé en minuscule.
+  \item \code{email} est unique par tenant et normalisé en minuscule.
+  \item \code{passwordHash} est obligatoire pour le flux local courant.
+  \item \code{authProvider} est obligatoire et décrit l'origine du compte.
+  \item \code{plan} et \code{onboardingStatus} ne peuvent pas être vides ; \code{onboardingStep} $\geq 0$.
+  \item \code{emailVerifiedAt} / \code{phoneVerifiedAt} nuls signifient non confirmés.
+  \item Un login MFA-enabled ne doit pas retourner de session finale avant validation du challenge MFA.
+  \item OTP, CAPTCHA, jetons de reset, de sélection et MFA sont courts, signés et bornés dans le temps.
+  \item Le jeton court de sélection de contexte est signé, de courte durée, et n'est pas un bearer token métier.
+  \item Le jeton de reset et le jeton de vérification email sont signés par \code{kernel-core} via la même infrastructure JWT RS256.
+  \item Le provider OIDC central ne remplace pas le RBAC métier ; il publie des tokens alignés avec le contexte sélectionné.
+  \item Les réponses \code{login}, \code{select-context} et \code{/users/me} doivent refléter les organisations réellement accessibles et leurs services effectifs.
+\end{itemize}
+\end{invbox}
+
+%=====================================================================
+\chapter{Cas d'utilisation}
+%=====================================================================
+\begin{figure}[h]
+  \centering
+  % \includegraphics[width=0.72\linewidth]{figures/auth-core-usecase.png}
+  \fbox{\parbox{0.9\linewidth}{\centering\vspace{0.8cm}\itshape\color{rtgray}
+  Diagramme des cas d'utilisation — \code{auth-core}\\[4pt]
+  (image générée depuis \texttt{diagrams/auth-core-usecase.puml})\vspace{0.8cm}}}
+  \caption{Cas d'utilisation du module auth-core.}
+\end{figure}
+
+\noindent\textbf{Acteurs.}
+\begin{itemize}[leftmargin=1.4em,itemsep=1pt]
+  \item \emph{Administrateur IAM} — crée un compte utilisateur (\code{register}).
+  \item \emph{Utilisateur} — consulte/ajuste son profil, son plan, son onboarding ; émet des challenges de vérification.
+  \item \emph{Backend consommateur} — identifie un principal, authentifie, découvre et sélectionne un contexte, inscrit en self-service, réinitialise le mot de passe.
+\end{itemize}
+Le cas transverse \emph{« Journaliser les opérations de sécurité »} est inclus (\code{include})
+par la plupart des cas d'usage ; le cas \emph{« Émettre un JWT d'accès RS256 »} est inclus par
+les flux d'authentification aboutis.
+
+%=====================================================================
+\chapter{Surface d'API exposée}
+%=====================================================================
+Toutes les routes \code{/api/**} sont soumises à la chaîne de sécurité du kernel :
+\code{ClientApplication} valide (\code{X-Client-Id} + \code{X-Api-Key}), autorisée sur le
+service, quota backend, abonnement d'organisation puis permission utilisateur au bon scope.
+Les réponses suivent l'enveloppe \code{ApiResponse<T> = \{success, data, message, errorCode, timestamp\}}.
+
+\section{Authentification et contextes}
+\begin{center}\small
+\begin{longtable}{@{}p{1.2cm}p{5.9cm}p{6.2cm}@{}}
+\toprule
+\textbf{M.} & \textbf{Chemin} & \textbf{Corps / rôle}\\
+\midrule\endhead
+POST & \code{/api/auth/sign-up} & \code{tenantId, firstName, lastName, username, email, password, \dots}\\
+POST & \code{/api/auth/login} & \code{\{principal, password\}} → accessToken, sessionToken, sharedSession, organisations\\
+POST & \code{/api/auth/identify} & \code{\{principal\}} — SIGN\_UP vs SIGN\_IN\\
+POST & \code{/api/auth/register} & (admin) \code{username, email, authProvider, \dots}\\
+POST & \code{/api/auth/discover-contexts} & \code{\{principal, password\}} → selectionToken + contexts\\
+POST & \code{/api/auth/select-context} & \code{\{selectionToken, contextId, organizationId?\}}\\
+POST & \code{/api/auth/discover-sign-up-contexts} & \code{\{organizationCode\}}\\
+POST & \code{/api/auth/refresh} & \code{\{refreshToken\}}\\
+POST & \code{/api/auth/logout} & invalide la session courante\\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\section{Vérification, mot de passe, challenges}
+\begin{center}\small
+\begin{longtable}{@{}p{1.2cm}p{6.6cm}p{5.5cm}@{}}
+\toprule
+\textbf{M.} & \textbf{Chemin} & \textbf{Corps / rôle}\\
+\midrule\endhead
+POST & \code{/api/auth/email-verification/request} & jeton pour l'utilisateur courant\\
+POST & \code{/api/auth/email-verification/resend} & \code{\{principal\}} (mode PREVIEW : token en clair)\\
+POST & \code{/api/auth/email-verification/confirm} & \code{\{verificationToken\}}\\
+POST & \code{/api/auth/forgot-password} & \code{\{principal\}} → selectionToken\\
+POST & \code{/api/auth/password-reset/issue} & \code{\{selectionToken, contextId\}}\\
+POST & \code{/api/auth/reset-password} & \code{\{resetToken, newPassword\}}\\
+POST & \code{/api/auth/otp} , \code{/otp/verify} & émission / vérification OTP\\
+POST & \code{/api/auth/captcha} , \code{/captcha/verify} & challenge / jeton CAPTCHA\\
+POST & \code{/api/auth/mfa/enable|confirm|disable} & activation MFA en deux temps\\
+POST & \code{/api/auth/login/mfa/confirm} & \code{\{mfaToken, code\}}\\
+POST & \code{/api/auth/phone-verification/request|confirm} & vérification téléphone\\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\section{Self-service et OIDC}
+\begin{center}\small
+\begin{longtable}{@{}p{1.2cm}p{6.6cm}p{5.5cm}@{}}
+\toprule
+\textbf{M.} & \textbf{Chemin} & \textbf{Rôle}\\
+\midrule\endhead
+GET & \code{/api/users/me} & profil + organisations accessibles\\
+PUT & \code{/api/users/me/plan} & met à jour le plan\\
+PUT & \code{/api/users/me/onboarding} & met à jour l'onboarding\\
+PUT & \code{/api/users/me/identity-onboarding} & type de compte / activité / payload\\
+GET & \code{/.well-known/openid-configuration} & découverte OIDC\\
+GET & \code{/.well-known/oauth-authorization-server} & métadonnées OAuth2\\
+GET & \code{/.well-known/jwks.json} & clé publique RSA (RS256)\\
+POST & \code{/oauth2/token} & token-exchange (\code{context\_id} + \code{service\_code})\\
+GET/POST & \code{/oauth2/userinfo} & infos utilisateur depuis un access token\\
+POST & \code{/oauth2/introspect} & introspection de jeton\\
+\bottomrule
+\end{longtable}
+\end{center}
+
+%=====================================================================
+\chapter{Sécurité et cryptographie}
+%=====================================================================
+\section{Signature asymétrique RS256}
+Les JWT d'accès sont signés en \textbf{RS256} : \code{auth-core} (via le
+\code{JwtTokenService} du kernel) signe avec la \textbf{clé privée} RSA ; tout service
+vérifie avec la \textbf{clé publique}. Aucun secret partagé n'est distribué : chaque
+microservice vérifie un jeton hors-ligne. La clé publique est exposée au format \textbf{JWKS}
+sur \code{/.well-known/jwks.json}.
+
+\begin{lstlisting}[caption={Exemple de payload d'access token (claims décodés).}]
+{
+  "sub": "c256dcb1-...",   "aud": "iwm-api",   "iss": "iwm-backend",
+  "svc": "SALES",          "azp": "poc-client", "sso": true,
+  "tid": "00000000-0000-0000-0000-000000000001",
+  "actor": "bafb4f41-...", "permissions": [], "exp": 1782648517
+}
+\end{lstlisting}
+
+\section{Mode de livraison PREVIEW\_ONLY}
+Lorsqu'aucun provider SMTP n'est configuré (\code{iwm.auth.email.enabled=false} ou absence
+de \code{from}), \code{AuthEmailDeliveryService} bascule en mode \code{PREVIEW\_ONLY} et
+renvoie le jeton de challenge \textbf{en clair} dans la réponse (\code{challengeTokenPreview}).
+Ce mode permet d'exercer les flux de vérification email et de reset sans serveur mail — utile
+en dev, en test et pour un POC. En production, la livraison est réellement SMTP
+(\code{deliveryMode = SMTP}).
+
+\section{Mode strict de connexion}
+Un compte \code{LOCAL} dont l'email n'est pas vérifié ne peut pas se connecter : le
+\code{sign-up} renvoie \code{EMAIL\_VERIFICATION\_REQUIRED} sans session tant que l'email
+n'est pas confirmé.
+
+%=====================================================================
+\chapter{Diagrammes de séquence (DS-AU)}
+%=====================================================================
+Cette section reprend les scénarios d'interaction les plus significatifs. Chaque diagramme
+possède une source PlantUML dans \texttt{diagrams/}.
+
+\newcommand{\dsfig}[2]{%
+  \begin{figure}[h]\centering
+  % \includegraphics[width=\linewidth]{figures/#1.png}
+  \fbox{\parbox{0.95\linewidth}{\centering\vspace{0.6cm}\itshape\color{rtgray}
+  #2\\[3pt](\texttt{diagrams/#1.puml})\vspace{0.6cm}}}
+  \caption{#2}\end{figure}}
+
+\section{DS-AU-01 — Création d'un compte par un administrateur IAM}
+Requête \httppost~\code{/api/auth/register} portée par une \code{ClientApplication} et un
+bearer admin. Le service vérifie l'unicité \code{username}, encode le mot de passe, persiste
+le \code{UserAccount} et journalise \code{USER\_REGISTERED}.
+\dsfig{ds-au-01-register}{DS-AU-01 — Création d'un compte utilisateur (admin IAM)}
+
+\section{DS-AU-02 / 03 — Authentification tenant-scoped et émission du JWT}
+\code{/login} résout le compte par principal dans le tenant, vérifie le mot de passe
+(BCrypt), résout les permissions (\code{ReactivePermissionResolver}), puis émet l'access
+token RS256 via \code{UserSessionTokenService} et le retourne avec les organisations.
+\dsfig{ds-au-02-login}{DS-AU-02/03 — Login tenant-scoped puis émission du JWT RS256}
+
+\section{DS-AU-07 / 08 — Découverte et sélection de contexte}
+\code{/discover-contexts} résout globalement tous les comptes correspondant au principal,
+filtre par mot de passe valide, agrège les organisations (\code{UserOrganizationAccessDirectory})
+et émet un jeton court de sélection. \code{/select-context} le consomme, valide le contexte et
+émet le JWT final contextualisé.
+\dsfig{ds-au-07-context}{DS-AU-07/08 — Découverte globale puis sélection de contexte}
+
+\section{DS-AU-10 — Réinitialisation de mot de passe (SMTP ou PREVIEW\_ONLY)}
+\code{forgot-password} → jeton de sélection ; \code{password-reset/issue} → jeton de reset
+signé ; livraison SMTP ou repli \code{PREVIEW\_ONLY} ; \code{reset-password} vérifie le jeton
+et met à jour le \code{passwordHash}.
+\dsfig{ds-au-10-reset}{DS-AU-10 — Reset de mot de passe (livraison SMTP ou PREVIEW\_ONLY)}
+
+\section{DS-AU-11 — Vérification d'email après authentification}
+\code{email-verification/request} émet un jeton signé ; \code{confirm} le valide et
+renseigne \code{emailVerifiedAt}.
+\dsfig{ds-au-11-emailverif}{DS-AU-11 — Vérification d'email}
+
+%=====================================================================
+\chapter{Flow OIDC / token-exchange}
+%=====================================================================
+Le provider OIDC central expose la découverte et le grant \code{token-exchange} (RFC 8693) :
+un jeton de session SSO est échangé, avec le \code{context\_id} (organisation) et le
+\code{service\_code}, contre un access token dédié au service. Le \code{userinfo} restitue
+l'identité depuis ce token.
+
+\begin{lstlisting}[caption={Échange token-exchange puis userinfo.}]
+curl -X POST $BASE/oauth2/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
+  --data-urlencode "subject_token=$SSO_TOKEN" \
+  --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:jwt" \
+  --data-urlencode "context_id=$CTX" --data-urlencode "service_code=SALES" \
+  --data-urlencode "client_id=$CLIENT_ID" --data-urlencode "client_secret=$SECRET"
+# => { "access_token": "...RS256...", "issued_token_type": "...access_token" }
+
+curl $BASE/oauth2/userinfo -H "Authorization: Bearer $ACCESS_TOKEN"
+# => { "sub", "email", "tenantId", "actorId", "clientId", "serviceCode", "sso" }
+\end{lstlisting}
+
+\begin{notebox}
+\textbf{Périmètre OIDC.} Le seul \code{grant\_types\_supported} est le \code{token-exchange}.
+Il n'existe pas d'\code{authorization\_endpoint} ni d'écran de consentement « à la Google » :
+\code{auth-core} est l'IdP des applications \emph{first-party}, pas un fournisseur OAuth pour
+applications tierces.
+\end{notebox}
+
+%=====================================================================
+\chapter{Stratégie de test et couverture}
+%=====================================================================
+\section{Tests unitaires implémentés}
+Le module a été couvert par une suite de \textbf{tests unitaires} exécutés sans base de
+données ni contexte Spring (en mémoire) :
+\begin{center}\small
+\begin{tabular}{@{}p{7.4cm}p{2.0cm}p{4.2cm}@{}}
+\toprule
+\textbf{Fichier de test} & \textbf{\#} & \textbf{Cible}\\
+\midrule
+\code{UserAccountTest} & 21 & modèle de domaine, invariants, immuabilité\\
+\code{AuthApplicationServiceTest} & 15 & register / login / identify, isolation tenant\\
+\code{AuthContextApplicationServiceTest} & 10 & discover / select multi-tenant\\
+\code{JwtTokenServiceTest} & 11 & signature RS256, claims, JWKS\\
+\code{AuthSsoSessionTokenServiceTest} & 10 & passeport SSO, TTL, rejets\\
+\code{AuthSharedSessionServiceTest} & 6 & issueForUser / userInfo\\
+\code{AuthOidcServiceTest} & 11 & token-exchange, openid-configuration\\
+\midrule
+\textbf{Total auth-core} & \textbf{84} & tous verts (BUILD SUCCESS)\\
+\code{roles-core} (bonus) & 20 & Role, RBAC scopeé\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Points de vérification clés}
+\begin{itemize}[leftmargin=1.4em,itemsep=1pt]
+  \item hachage BCrypt, rejet des doublons \code{username}/\code{email}, isolation par tenant ;
+  \item émission d'un token SSO avec contextes embarqués et respect du TTL ;
+  \item JWKS exporté contenant une clé publique RSA (sans la clé privée) ;
+  \item rejet des tokens corrompus, nuls, de mauvais type ou d'un autre issuer ;
+  \item token-exchange : succès \code{Bearer}, claims corrects, rejets \code{invalid\_grant} / \code{invalid\_client} / \code{invalid\_request}.
+\end{itemize}
+
+\section{Couverture restant à compléter}
+Flux secondaires documentés mais non encore couverts par des tests dédiés côté serveur : mot de passe
+oublié (bout en bout), inscription avec sélection de contexte,
+\code{AuthChallengeTokenService} (CAPTCHA), tests d'intégration R2DBC/HTTP globaux, et cas
+limites (compte \code{SUSPENDED}/\code{REVOKED}, token expiré). Les flux de double authentification (MFA),
+d'activation/désactivation d'OTP et de modification de forfait ont été quant à eux entièrement
+implémentés et validés fonctionnellement via le client d'interface utilisateur POC (Next.js).
+
+%=====================================================================
+\chapter{Déploiement isolé et démonstration (POC)}\label{chap:poc}
+%=====================================================================
+Grâce à l'architecture hexagonale, \code{auth-core} a été extrait dans un \emph{slice}
+autonome et déployé indépendamment du reste du monolithe. Le slice embarque
+\code{common-core}, \code{kernel-core}, \code{file-core}, \code{actor-core},
+\code{roles-core} et \code{auth-core}, plus un runner Spring Boot exécutable. Les trois ports
+liés à l'organisation sont servis par des adaptateurs \textbf{in-memory seedés}, et la
+persistance est en mémoire (profil \code{test-memory}, JWT RSA auto-généré).
+
+\section{Interface Client de Démonstration (Next.js)}
+Afin de valider et présenter le rôle de vitrine de YowAuth, une application web
+\textbf{Next.js} moderne et responsive a été développée et intégrée avec le Kernel.
+Elle implémente les flux IHM suivants dans le respect des règles ergonomiques :
+
+\subsection{Connexion en 2 étapes et gestion du MFA}
+L'interface de connexion sépare la phase de détection de compte de la validation des secrets :
+\begin{enumerate}
+  \item \textbf{Étape d'identification} : appel à \code{/api/auth/identify} pour vérifier l'existence de l'identifiant.
+  \item \textbf{Saisie du mot de passe} : si le compte existe, saisie du secret. En cas de défi MFA retourné par le serveur (code statut \code{202 Accepted}), l'interface bascule dynamiquement sur l'écran OTP.
+  \item \textbf{Validation OTP} : saisie du code reçu par e-mail et confirmation finale via \code{/api/auth/login/mfa/confirm}. En mode démo, le code est pré-affiché dans l'interface pour faciliter l'évaluation.
+\end{enumerate}
+
+\subsection{Centre de contrôle utilisateur & Sécurité}
+Après connexion, l'utilisateur accède à un espace de contrôle structuré en deux colonnes :
+\begin{itemize}
+  \item \textbf{Gestion de l'abonnement} : mise à jour du plan de l'utilisateur (\code{FREE}, \code{PREMIUM}, \code{ENTERPRISE}) en direct via l'endpoint \code{PUT /api/users/me/plan}.
+  \item \textbf{Enrôlement et Révocation MFA} : activation ou désactivation à la volée de la double authentification (\code{enable}, \code{confirm}, \code{disable}) avec validation par code de sécurité.
+  \item \textbf{Visualisation des Privilèges} : décodage en temps réel du jeton JWT et affichage des permissions effectives sous forme de badges.
+\end{itemize}
+
+\subsection{Simulateur SSO OIDC interactif}
+Pour matérialiser le rôle de passerelle de YowAuth, le clic sur une application active (ex: \emph{Ventes}, \emph{Comptabilité}) intercepte la redirection pour lancer une simulation visuelle de Single Sign-On (SSO) :
+\begin{enumerate}
+  \item Requête de \textbf{Token-Exchange (OIDC RFC 8693)} auprès de \code{/oauth2/token} pour échanger le jeton SSO contre un jeton de service contextualisé à l'organisation active.
+  \item Validation du jeton via l'introspection \code{/oauth2/userinfo} pour récupérer le profil utilisateur.
+  \item Journalisation colorée de ces étapes techniques dans une console interactive, puis redirection transparente de l'utilisateur vers l'application cible.
+\end{enumerate}
+
+\section{Ergonomie et Charte Graphique}
+L'interface a été conçue pour offrir une esthétique premium : mise en page en grille responsive à 2 colonnes (applications à gauche, profil et sécurité à droite), gestion adaptative des écrans mobiles, et utilisation d'illustrations représentatives à la place des émojis pour illustrer le catalogue de services de Yowyob.
+
+%=====================================================================
+\chapter{Conclusion}
+%=====================================================================
+\code{auth-core} constitue un fournisseur d'identité complet et cohérent pour l'écosystème
+RT-Comops : séparation stricte identité / compte, authentification multi-parcours,
+multi-tenant et multi-organisation, émission de JWT \textbf{RS256} vérifiables, self-service
+utilisateur, provider OIDC central par \emph{token-exchange}, et une batterie d'invariants de
+sécurité. L'architecture hexagonale garantit la testabilité et l'extractibilité du module,
+démontrée par un déploiement isolé fonctionnel. Les évolutions naturelles portent sur la
+couverture des flux secondaires (reset, MFA, OTP), les tests d'intégration, et — si un usage
+tiers l'exige — l'ajout d'un \code{authorization\_endpoint} avec écran de consentement.
+
+\end{document}
