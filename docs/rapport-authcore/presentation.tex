@@ -1,0 +1,246 @@
+%%=====================================================================
+%%  RT-Comops Backend — Présentation de Soutenance (YowAuth)
+%%  Format : LaTeX Beamer (Compilable sur Overleaf)
+%%  Auteur : Tchoutzine Tchetnkou albino .C
+%%=====================================================================
+\documentclass[10pt,aspectratio=169]{beamer}
+
+% Encodage & Langue
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{xcolor}
+
+% Thème Beamer professionnel et épuré
+\usetheme{Madrid}
+\usecolortheme{default}
+
+% Personnalisation de la charte de couleurs (Navy / Bleu ENSPY)
+\definecolor{enspynavy}{HTML}{1F3A5F}
+\definecolor{enspygold}{HTML}{D4AF37}
+\definecolor{rtlight}{HTML}{F3F4F6}
+\definecolor{rtcode}{HTML}{0B1021}
+
+\setbeamercolor{palette primary}{bg=enspynavy,fg=white}
+\setbeamercolor{palette secondary}{bg=enspynavy!85,fg=white}
+\setbeamercolor{palette tertiary}{bg=enspynavy!70,fg=white}
+\setbeamercolor{title}{bg=enspynavy,fg=white}
+\setbeamercolor{structure}{fg=enspynavy}
+\setbeamercolor{block title}{bg=enspynavy,fg=white}
+\setbeamercolor{block body}{bg=rtlight,fg=black}
+
+% Suppression des boutons de navigation Beamer en bas
+\setbeamertemplate{navigation symbols}{}
+
+% Métadonnées de la présentation
+\title[Présentation YowAuth (auth-core)]{RT-Comops Backend -- Module YowAuth (auth-core)}
+\subtitle{Fournisseur d'Identité (IdP) Central \& SSO}
+\author[Tchoutzine Tchetnkou]{Tchoutzine Tchetnkou albino .C (Matricule : 22P387)}
+\institute[ENSPY]{
+  Département de Génie Informatique\\
+  \textbf{École Nationale Supérieure Polytechnique de Yaoundé (ENSPY)}\\
+  \vspace{0.2cm}
+  \scalebox{0.85}{UE : Réseaux Mobiles et Intelligents}
+}
+\date{\today}
+
+% Métadonnées additionnelles pour la page de garde
+\titlegraphic{\includegraphics[height=1.2cm]{logo_enspy.png}}
+
+\lstdefinestyle{shell}{
+  backgroundcolor=\color{rtcode}, basicstyle=\ttfamily\tiny\color{white},
+  breaklines=true, columns=fullflexible, frame=none,
+  showstringspaces=false, aboveskip=4pt, belowskip=4pt}
+
+\begin{document}
+
+%---------------------------------------------------------------------
+% Page de titre
+%---------------------------------------------------------------------
+\begin{frame}
+  \titlepage
+  \centering
+  \scalebox{0.8}{\textcolor{enspynavy}{\textbf{Superviseur :}} Pr. Eng Thomas Djotio \quad \textbf{Manager/Chef de projet :}} \scalebox{0.8}{M. Tsafack Fotso Savio}
+\end{frame}
+
+%---------------------------------------------------------------------
+% Slide 1 : Introduction et Objet du Module
+%---------------------------------------------------------------------
+\begin{frame}{Introduction et Rôle de YowAuth}
+  \begin{block}{Qu'est-ce que YowAuth (auth-core) ?}
+    C'est le module de gestion d'identité (IdP) et de Single Sign-On (SSO) de la plateforme RT-Comops Backend.
+  \end{block}
+  \vspace{0.2cm}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \textbf{Séparation des responsabilités}
+      \begin{itemize}
+        \item \textbf{Identity Profile} (\code{actor-core}) : Gère les informations physiques et l'état civil de l'humain.
+        \item \textbf{Authentication account} (\code{auth-core}) : Gère les identifiants techniques et les secrets d'accès.
+      end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{Périmètre Fonctionnel}
+      \begin{itemize}
+        \item Inscription publique \& Connexion locale.
+        \item Résolution de contextes multi-tenant.
+        \item Double authentification (MFA).
+        \item Émission de tokens d'accès JWT RS256.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+%---------------------------------------------------------------------
+% Slide 2 : Architecture Hexagonale
+%---------------------------------------------------------------------
+\begin{frame}{Architecture Hexagonale du Module}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \textbf{Structure Interne (Hexagone)}
+      \begin{itemize}
+        \item \textbf{Couche de Domaine} : Contient l'agrégat immuable \code{UserAccount} et ses invariants d'intégrité.
+        \item \textbf{Couche d'Application} : Coordonne les cas d'usage via les ports d'entrée et de sortie.
+        \item \textbf{Couche d'Adaptateurs} : WebFlux (adaptateurs d'entrée) et R2DBC réactif (adaptateurs de sortie).
+      end{itemize}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Invariants de Domaine}
+        \begin{itemize}
+          \item Identifiants uniques et normalisés.
+          \item Mot de passe haché avec BCrypt.
+          \item Interdiction d'émettre un JWT actif si le challenge MFA OTP est en attente.
+          \item Blocage automatique des comptes marqués comme suspendus ou désactivés.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+%---------------------------------------------------------------------
+% Slide 3 : Surface d'API exposée
+%---------------------------------------------------------------------
+\begin{frame}{Surface d'API et Sécurité}
+  \textbf{Principales routes exposées (secured by backend API-Key)}
+  \vspace{0.2cm}
+  \begin{table}
+    \small
+    \begin{tabular}{lll}
+      \toprule
+      \textbf{Méthode} & \textbf{Endpoint} & \textbf{Rôle technique} \\
+      \midrule
+      \code{POST} & \code{/api/auth/identify} & Détection du type de compte (2 étapes) \\
+      \code{POST} & \code{/api/auth/login} & Authentification mot de passe / Défi MFA \\
+      \code{POST} & \code{/api/auth/login/mfa/confirm} & Validation du code OTP \\
+      \code{POST} & \code{/api/auth/discover-contexts} & Lister les tenants associés \\
+      \code{POST} & \code{/api/auth/select-context} & Émission du JWT final du contexte choisi \\
+      \code{PUT} & \code{/api/users/me/plan} & Changement de forfait (Self-service) \\
+      \bottomrule
+    \end{tabular}
+  \end{table}
+\end{frame}
+
+%---------------------------------------------------------------------
+% Slide 4 : Sécurité Cryptographique et OIDC
+%---------------------------------------------------------------------
+\begin{frame}{Sécurité Cryptographique et OIDC}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Signature Asymétrique RS256}
+        \begin{itemize}
+          \item Les JWT sont signés avec la clé privée du Kernel.
+          \item Validation décentralisée (hors-ligne) par les microservices via la clé publique.
+          \item Publication de la clé publique au format standard JWKS (\code{/.well-known/jwks.json}).
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{OIDC et Token Exchange (RFC 8693)}
+        \begin{itemize}
+          \item SSO basé sur l'échange de jetons de session.
+          \item Route \code{/oauth2/token} : convertit le jeton SSO en jeton de service contextualisé (ex: \code{SALES}).
+          \item Route \code{/oauth2/userinfo} : résout l'identité de l'utilisateur final.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+%---------------------------------------------------------------------
+% Slide 5 : Connexion en 2 étapes & MFA
+%---------------------------------------------------------------------
+\begin{frame}{Expérience utilisateur : Connexion en 2 étapes \& MFA}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \textbf{Cinématique ergonomique et sécurisée}
+      \begin{enumerate}
+        \item \textbf{Détection de l'identifiant} : L'application interroge \code{identify} pour savoir s'il s'agit d'une inscription ou d'une connexion.
+        \item \textbf{Vérification du mot de passe} : Saisie du secret. Si le compte a le MFA activé, le serveur retourne un code \code{202 Accepted} contenant un \code{mfaToken}.
+        \item \textbf{Défi OTP} : L'utilisateur reçoit un OTP par e-mail et le saisit. La session est validée via \code{/login/mfa/confirm}.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.4\textwidth}
+      \begin{block}{MFA à la volée (Self-service)}
+        L'utilisateur connecté peut lui-même :
+        \begin{itemize}
+          \item Activer le MFA (\code{mfa/enable}).
+          \item Valider son activation par OTP (\code{mfa/confirm}).
+          \item Désactiver son MFA (\code{mfa/disable}).
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+%---------------------------------------------------------------------
+% Slide 6 : Démonstration et Sandbox (POC)
+%---------------------------------------------------------------------
+\begin{frame}{Démonstration du POC (Next.js)}
+  \begin{block}{Validation de l'implémentation en local et en ligne}
+    Une application Next.js a été connectée au Kernel YowAuth. Elle sert de bac à sable interactif.
+  \end{block}
+  \vspace{0.2cm}
+  \begin{itemize}
+    \item \textbf{Double Colonne responsive} : Grille moderne séparant les applications métiers actives du centre de profil / sécurité.
+    \item \textbf{Vitrine SSO Interactive} : Un terminal intégré trace en temps réel les appels d'échange de jeton (\code{token-exchange}) et d'introspection d'identité (\code{userinfo}) pour illustrer la mécanique sous-jacente du SSO.
+    \item \textbf{Images représentatives} : Remplacement complet des emojis par des visuels professionnels pour illustrer le catalogue de services.
+  \end{itemize}
+\end{frame}
+
+%---------------------------------------------------------------------
+% Slide 7 : Conclusion et Perspectives
+%---------------------------------------------------------------------
+\begin{frame}{Conclusion et Perspectives}
+  \begin{block}{Objectifs Remplis}
+    \begin{itemize}
+      \item Architecture hexagonale réactive implémentée de bout en bout (Spring Boot WebFlux).
+      \item Cycle IAM complet opérationnel (inscription, connexion multi-contexte, MFA).
+      \item Standardisation sur OIDC / Token Exchange et cryptographie RS256/JWKS.
+    \end{itemize}
+  \end{block}
+  \vspace{0.2cm}
+  \textbf{Perspectives de développement}
+  \begin{itemize}
+    \item Support des clés physiques FIDO2 / WebAuthn pour le MFA sans mot de passe.
+    \item Liaison directe avec un serveur SMTP en production (fin du mode \code{PREVIEW_ONLY}).
+    \item Back-office de gestion et de suspension administrative des comptes utilisateurs.
+  \end{itemize}
+\end{frame}
+
+%---------------------------------------------------------------------
+% Page finale
+%---------------------------------------------------------------------
+\begin{frame}
+  \centering
+  \Huge \textbf{\textcolor{enspynavy}{Merci pour votre attention !}}
+  \vspace{0.8cm}
+  
+  \Large Questions \& Réponses
+  \vspace{0.8cm}
+  
+  \scalebox{0.85}{\textcolor{rtgray}{École Nationale Supérieure Polytechnique de Yaoundé (ENSPY)}}
+\end{frame}
+
+\end{document}
