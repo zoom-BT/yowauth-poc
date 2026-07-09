@@ -1,11 +1,13 @@
 // Client API YowAuth — encapsule les appels à l'IdP (sign-up, vérif, login, profil).
 
 export const config = {
-  API: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080",
+  PRIMARY_API: process.env.NEXT_PUBLIC_PRIMARY_API_URL ?? "https://kernel-core.yowyob.com",
+  SECONDARY_API: process.env.NEXT_PUBLIC_SECONDARY_API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080",
   CLIENT_ID: process.env.NEXT_PUBLIC_CLIENT_ID ?? "poc-client",
   API_KEY: process.env.NEXT_PUBLIC_API_KEY ?? "poc-secret-key",
   TENANT: process.env.NEXT_PUBLIC_TENANT_ID ?? "00000000-0000-0000-0000-000000000001",
   SERVICE_CODE: process.env.NEXT_PUBLIC_SERVICE_CODE ?? "SALES",
+  get API() { return this.PRIMARY_API; }
 };
 
 const baseHeaders: Record<string, string> = {
@@ -42,10 +44,84 @@ export type Session = {
   organizations: Organization[];
 };
 
+export type PasswordResetContextResponse = {
+  contextId: string;
+  tenantId: string;
+  userId: string;
+  actorId: string;
+  username: string;
+  email: string;
+};
+
+export type ForgotPasswordResponse = {
+  principal: string;
+  matchingAccountCount: number;
+  selectionToken: string;
+  selectionTokenExpiresInSeconds: number;
+  contexts: PasswordResetContextResponse[];
+};
+
+export type IssuedAuthChallengeResponse = {
+  deliveryMode: string;
+  challengeTokenPreview: string;
+  expiresInSeconds: number;
+};
+
+export type CaptchaChallengeResponse = {
+  captchaToken: string;
+  prompt: string;
+  answerPreview: string;
+  expiresInSeconds: number;
+};
+
+export type CaptchaVerificationResponse = {
+  captchaVerificationToken: string;
+  expiresInSeconds: number;
+};
+
+export type UserAccountResponse = {
+  id: string;
+  tenantId: string;
+  username: string;
+  email: string;
+  status: string;
+  accountType: string;
+};
+
 type ApiResponse<T> = { success: boolean; data: T; message?: string; errorCode?: string };
 
+/**
+ * Effectue un appel HTTP fetch résilient. Tente d'abord de contacter l'API principale.
+ * En cas d'erreur réseau (ex: serveur indisponible), d'erreur de proxy (502, 503, 504), ou
+ * si l'endpoint n'est pas trouvé/implémenté sur l'API principale (404, 501),
+ * la requête est automatiquement re-soumise sur l'API de repli (POC).
+ */
+export async function resilientFetch(path: string, init?: RequestInit): Promise<Response> {
+  const primaryUrl = `${config.PRIMARY_API}${path}`;
+  const secondaryUrl = `${config.SECONDARY_API}${path}`;
+
+  try {
+    const res = await fetch(primaryUrl, init);
+    // Bascule sur le serveur secondaire si le service est indisponible ou si l'endpoint n'est pas implémenté
+    if (
+      res.status === 404 ||
+      res.status === 501 ||
+      res.status === 502 ||
+      res.status === 503 ||
+      res.status === 504
+    ) {
+      console.warn(`[Failover YowAuth] L'API principale (${config.PRIMARY_API}) a retourné le statut ${res.status} pour ${path}. Bascule sur l'API de repli (${config.SECONDARY_API}).`);
+      return await fetch(secondaryUrl, init);
+    }
+    return res;
+  } catch (error) {
+    console.warn(`[Failover YowAuth] L'API principale (${config.PRIMARY_API}) est injoignable (${error}). Bascule sur l'API de repli (${config.SECONDARY_API}).`);
+    return await fetch(secondaryUrl, init);
+  }
+}
+
 async function api<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
-  const res = await fetch(`${config.API}${path}`, init);
+  const res = await resilientFetch(path, init);
   const text = await res.text();
   let body: ApiResponse<T>;
   try {
@@ -60,11 +136,24 @@ async function api<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>>
 }
 
 /** Inscription + vérification email auto (mode PREVIEW du backend) → compte prêt à se connecter. */
-export async function signUpAndVerify(username: string, email: string, password: string): Promise<void> {
+export async function signUpAndVerify(
+  username: string,
+  email: string,
+  password: string,
+  captchaVerificationToken?: string
+): Promise<void> {
   await api(`/api/auth/sign-up`, {
     method: "POST",
     headers: baseHeaders,
-    body: JSON.stringify({ tenantId: config.TENANT, username, email, password, firstName: username, lastName: "User" }),
+    body: JSON.stringify({
+      tenantId: config.TENANT,
+      username,
+      email,
+      password,
+      firstName: username,
+      lastName: "User",
+      captchaVerificationToken,
+    }),
   });
   const resend = await api<{ challengeTokenPreview: string }>(`/api/auth/email-verification/resend`, {
     method: "POST",
@@ -124,4 +213,53 @@ export function decodeJwt(token: string): Record<string, unknown> | null {
   } catch {
     return null;
   }
+}
+
+/** Initie la récupération du mot de passe en identifiant l'utilisateur */
+export async function forgotPassword(principal: string): Promise<ForgotPasswordResponse> {
+  const res = await api<ForgotPasswordResponse>(`/api/auth/forgot-password`, {
+    method: "POST",
+    headers: baseHeaders,
+    body: JSON.stringify({ principal }),
+  });
+  return res.data;
+}
+
+/** Demande l'émission du défi de réinitialisation de mot de passe (token de reset) pour un contexte donné */
+export async function issuePasswordReset(selectionToken: string, contextId: string): Promise<IssuedAuthChallengeResponse> {
+  const res = await api<IssuedAuthChallengeResponse>(`/api/auth/password-reset/issue`, {
+    method: "POST",
+    headers: baseHeaders,
+    body: JSON.stringify({ selectionToken, contextId }),
+  });
+  return res.data;
+}
+
+/** Finalise le changement de mot de passe */
+export async function resetPassword(resetToken: string, newPassword: string): Promise<UserAccountResponse> {
+  const res = await api<UserAccountResponse>(`/api/auth/reset-password`, {
+    method: "POST",
+    headers: baseHeaders,
+    body: JSON.stringify({ resetToken, newPassword }),
+  });
+  return res.data;
+}
+
+/** Récupère un défi de captcha */
+export async function getCaptchaChallenge(): Promise<CaptchaChallengeResponse> {
+  const res = await api<CaptchaChallengeResponse>(`/api/auth/captcha`, {
+    method: "POST",
+    headers: baseHeaders,
+  });
+  return res.data;
+}
+
+/** Valide la réponse au captcha et renvoie un token de vérification */
+export async function verifyCaptchaChallenge(captchaToken: string, answer: string): Promise<CaptchaVerificationResponse> {
+  const res = await api<CaptchaVerificationResponse>(`/api/auth/captcha/verify`, {
+    method: "POST",
+    headers: baseHeaders,
+    body: JSON.stringify({ captchaToken, answer }),
+  });
+  return res.data;
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
-import { config, decodeJwt } from "../lib/yowauth";
+import { config, decodeJwt, resilientFetch } from "../lib/yowauth";
 
 const H: Record<string, string> = {
   "Content-Type": "application/json",
@@ -71,7 +71,7 @@ export default function DemoPage() {
       body = JSON.stringify(opt.json);
     }
     if (opt.bearer) headers["Authorization"] = `Bearer ${opt.bearer}`;
-    const res = await fetch(`${config.API}${path}`, { method, headers, body });
+    const res = await resilientFetch(path, { method, headers, body });
     const text = await res.text();
     let json: unknown = null;
     try {
@@ -91,7 +91,7 @@ export default function DemoPage() {
     const user = `poc_${Date.now()}`;
     const pw = "P@ssw0rd!2024";
 
-    add("info", `# cible : ${config.API}`);
+    add("info", `# cibles : principale = ${config.PRIMARY_API} | repli = ${config.SECONDARY_API}`);
     add("info", `# identité de test : ${user}`);
 
     try {
