@@ -637,6 +637,26 @@ L'interface de connexion sépare la phase de détection de compte de la validati
   \item \textbf{Validation OTP} : saisie du code reçu par e-mail et confirmation finale via \code{/api/auth/login/mfa/confirm}. En mode démo, le code est pré-affiché dans l'interface pour faciliter l'évaluation.
 \end{enumerate}
 
+\begin{figure}[h]
+  \centering
+  % \includegraphics[width=0.85\linewidth]{figures/poc-login-steps.png}
+  \fbox{\parbox{0.9\linewidth}{\centering\vspace{1.2cm}\itshape\color{rtgray}
+  Capture d'écran — Interface de connexion en 2 étapes\\[4pt]
+  (Placer l'image dans \texttt{figures/poc-login-steps.png})\vspace{1.2cm}}}
+  \caption{Écran d'identification et de saisie du mot de passe.}
+  \label{fig:poc-login-steps}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  % \includegraphics[width=0.85\linewidth]{figures/poc-login-mfa.png}
+  \fbox{\parbox{0.9\linewidth}{\centering\vspace{1.2cm}\itshape\color{rtgray}
+  Capture d'écran — Défi de double authentification (MFA OTP)\\[4pt]
+  (Placer l'image dans \texttt{figures/poc-login-mfa.png})\vspace{1.2cm}}}
+  \caption{Écran de confirmation MFA avec code reçu par e-mail.}
+  \label{fig:poc-login-mfa}
+\end{figure}
+
 \subsection{Centre de contrôle utilisateur & Sécurité}
 Après connexion, l'utilisateur accède à un espace de contrôle structuré en deux colonnes :
 \begin{itemize}
@@ -645,6 +665,16 @@ Après connexion, l'utilisateur accède à un espace de contrôle structuré en 
   \item \textbf{Visualisation des Privilèges} : décodage en temps réel du jeton JWT et affichage des permissions effectives sous forme de badges.
 \end{itemize}
 
+\begin{figure}[h]
+  \centering
+  % \includegraphics[width=0.9\linewidth]{figures/poc-dashboard.png}
+  \fbox{\parbox{0.95\linewidth}{\centering\vspace{1.5cm}\itshape\color{rtgray}
+  Capture d'écran — Tableau de bord d'applications et centre de profil\\[4pt]
+  (Placer l'image dans \texttt{figures/poc-dashboard.png})\vspace{1.5cm}}}
+  \caption{Vue globale du tableau de bord (applications actives et panneau de profil/sécurité).}
+  \label{fig:poc-dashboard}
+\end{figure}
+
 \subsection{Simulateur SSO OIDC interactif}
 Pour matérialiser le rôle de passerelle de YowAuth, le clic sur une application active (ex: \emph{Ventes}, \emph{Comptabilité}) intercepte la redirection pour lancer une simulation visuelle de Single Sign-On (SSO) :
 \begin{enumerate}
@@ -652,6 +682,16 @@ Pour matérialiser le rôle de passerelle de YowAuth, le clic sur une applicatio
   \item Validation du jeton via l'introspection \code{/oauth2/userinfo} pour récupérer le profil utilisateur.
   \item Journalisation colorée de ces étapes techniques dans une console interactive, puis redirection transparente de l'utilisateur vers l'application cible.
 \end{enumerate}
+
+\begin{figure}[h]
+  \centering
+  % \includegraphics[width=0.85\linewidth]{figures/poc-sso-modal.png}
+  \fbox{\parbox{0.9\linewidth}{\centering\vspace{1.2cm}\itshape\color{rtgray}
+  Capture d'écran — Modale interactive de simulation SSO\\[4pt]
+  (Placer l'image dans \texttt{figures/poc-sso-modal.png})\vspace{1.2cm}}}
+  \caption{Console de logs détaillant le flux Token-Exchange et UserInfo.}
+  \label{fig:poc-sso-modal}
+\end{figure}
 
 \section{Ergonomie et Charte Graphique}
 L'interface a été conçue pour offrir une esthétique premium : mise en page en grille responsive à 2 colonnes (applications à gauche, profil et sécurité à droite), gestion adaptative des écrans mobiles, et utilisation d'illustrations représentatives à la place des émojis pour illustrer le catalogue de services de Yowyob.
