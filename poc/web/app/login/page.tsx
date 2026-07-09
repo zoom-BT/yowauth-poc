@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   login,
+  confirmLoginMfa,
+  identify,
   signUpAndVerify,
   forgotPassword,
   issuePasswordReset,
@@ -18,12 +20,19 @@ import { saveSession } from "../lib/session";
 export default function LoginPage() {
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
+  const [loginSubStep, setLoginSubStep] = useState<"identify" | "password" | "mfa">("identify");
   const [principal, setPrincipal] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+
+  // MFA State
+  const [mfaToken, setMfaToken] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaChannel, setMfaChannel] = useState("");
+  const [mfaCodePreview, setMfaCodePreview] = useState<string | null>(null);
 
   // Captcha State
   const [captchaChallenge, setCaptchaChallenge] = useState<{ captchaToken: string; prompt: string; answerPreview: string } | null>(null);
@@ -88,15 +97,47 @@ export default function LoginPage() {
         await signUpAndVerify(principal.trim(), email.trim(), password, captchaVerificationToken);
         setSuccessMessage("Votre compte a été créé et vérifié avec succès !");
         setMode("login");
+        setLoginSubStep("identify");
         setPrincipal(principal.trim());
         setBusy(false);
         return;
       }
 
-      // Connexion
-      const s = await login(principal.trim(), password);
-      saveSession(s);
-      router.push("/");
+      // Connexion : Étape 1 - Identification
+      if (loginSubStep === "identify") {
+        const idRes = await identify(principal.trim());
+        if (!idRes.accountExists) {
+          throw new Error("Identifiant inconnu. Veuillez vérifier ou vous inscrire.");
+        }
+        setLoginSubStep("password");
+        setBusy(false);
+        return;
+      }
+
+      // Connexion : Étape 2 - Saisie du mot de passe
+      if (loginSubStep === "password") {
+        const res = await login(principal.trim(), password);
+        if ("mfaRequired" in res) {
+          setMfaToken(res.mfaToken);
+          setMfaChannel(res.channel);
+          setMfaCodePreview(res.codePreview);
+          setLoginSubStep("mfa");
+          setBusy(false);
+          return;
+        }
+        saveSession(res);
+        router.push("/");
+        return;
+      }
+
+      // Connexion : Étape 3 - Confirmation MFA
+      if (loginSubStep === "mfa") {
+        const s = await confirmLoginMfa(mfaToken, mfaCode.trim());
+        saveSession(s);
+        router.push("/");
+        return;
+      }
+
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setBusy(false);
@@ -297,37 +338,73 @@ export default function LoginPage() {
           {successMessage && <p className="alert alert--ok" style={{ marginBottom: "20px" }}>{successMessage}</p>}
 
           <div className="tabs" role="tablist">
-            <button type="button" className={`tab ${mode === "login" ? "tab--on" : ""}`} onClick={() => { setMode("login"); setError(""); setSuccessMessage(""); }}>Connexion</button>
-            <button type="button" className={`tab ${mode === "signup" ? "tab--on" : ""}`} onClick={() => { setMode("signup"); setError(""); setSuccessMessage(""); }}>Inscription</button>
+            <button type="button" className={`tab ${mode === "login" ? "tab--on" : ""}`} onClick={() => { setMode("login"); setLoginSubStep("identify"); setError(""); setSuccessMessage(""); }}>Connexion</button>
+            <button type="button" className={`tab ${mode === "signup" ? "tab--on" : ""}`} onClick={() => { setMode("signup"); setLoginSubStep("identify"); setError(""); setSuccessMessage(""); }}>Inscription</button>
           </div>
 
           <form onSubmit={onSubmit}>
-            <div className="field">
-              <label htmlFor="principal">{mode === "login" ? "Identifiant ou email" : "Nom d'utilisateur"}</label>
-              <input id="principal" className="input" value={principal} onChange={(e) => setPrincipal(e.target.value)} placeholder="ex : alice" autoComplete="username" required disabled={busy} />
-            </div>
-            {mode === "signup" && (
+            {mode === "login" && loginSubStep === "identify" && (
               <div className="field">
-                <label htmlFor="email">Email</label>
-                <input id="email" className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="alice@exemple.io" autoComplete="email" required disabled={busy} />
+                <label htmlFor="principal">Identifiant ou email</label>
+                <input id="principal" className="input" value={principal} onChange={(e) => setPrincipal(e.target.value)} placeholder="ex : alice" autoComplete="username" required disabled={busy} />
               </div>
             )}
-            <div className="field">
-              <label htmlFor="password">Mot de passe</label>
-              <input id="password" className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" autoComplete={mode === "login" ? "current-password" : "new-password"} required disabled={busy} />
-            </div>
 
-            {mode === "login" && (
-              <div style={{ textAlign: "right", marginTop: "-6px", marginBottom: "16px" }}>
-                <button
-                  type="button"
-                  onClick={() => { setMode("forgot"); setForgotStep(1); setError(""); setSuccessMessage(""); }}
-                  style={{ background: "none", border: "none", color: "var(--indigo)", cursor: "pointer", fontSize: "13px", padding: 0 }}
-                  disabled={busy}
-                >
-                  Mot de passe oublié ?
-                </button>
-              </div>
+            {mode === "login" && loginSubStep === "password" && (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", background: "var(--violet-soft)", padding: "10px 14px", borderRadius: "10px", fontSize: "14px" }}>
+                  <span style={{ color: "var(--brand-ink)" }}>Utilisateur : <strong>{principal}</strong></span>
+                  <button type="button" style={{ background: "none", border: "none", color: "var(--indigo)", cursor: "pointer", fontWeight: 600, fontSize: "12.5px" }} onClick={() => setLoginSubStep("identify")}>Modifier</button>
+                </div>
+                <div className="field">
+                  <label htmlFor="password">Mot de passe</label>
+                  <input id="password" className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" autoComplete="current-password" required disabled={busy} />
+                </div>
+                <div style={{ textAlign: "right", marginTop: "-6px", marginBottom: "16px" }}>
+                  <button
+                    type="button"
+                    onClick={() => { setMode("forgot"); setForgotStep(1); setError(""); setSuccessMessage(""); }}
+                    style={{ background: "none", border: "none", color: "var(--indigo)", cursor: "pointer", fontSize: "13px", padding: 0 }}
+                    disabled={busy}
+                  >
+                    Mot de passe oublié ?
+                  </button>
+                </div>
+              </>
+            )}
+
+            {mode === "login" && loginSubStep === "mfa" && (
+              <>
+                <div className="alert alert--ok" style={{ marginBottom: "16px", fontSize: "13px", lineHeight: "1.4" }}>
+                  🔐 <strong>Double Authentification (MFA) :</strong> Un code temporaire a été envoyé sur votre canal <strong>{mfaChannel}</strong>.
+                </div>
+                {mfaCodePreview && (
+                  <div className="alert alert--ok" style={{ marginBottom: "16px", fontSize: "12.5px" }}>
+                    <strong>Mode Démo :</strong> Code MFA reçu : <code style={{ fontFamily: "var(--mono)", background: "#d1fae5", padding: "2px 4px", borderRadius: "4px" }}>{mfaCodePreview}</code>
+                  </div>
+                )}
+                <div className="field">
+                  <label htmlFor="mfaCode">Code de vérification (OTP)</label>
+                  <input id="mfaCode" className="input" type="text" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} placeholder="ex : 123456" required disabled={busy} />
+                </div>
+              </>
+            )}
+
+            {mode === "signup" && (
+              <>
+                <div className="field">
+                  <label htmlFor="principal">Nom d&apos;utilisateur</label>
+                  <input id="principal" className="input" value={principal} onChange={(e) => setPrincipal(e.target.value)} placeholder="ex : alice" autoComplete="username" required disabled={busy} />
+                </div>
+                <div className="field">
+                  <label htmlFor="email">Email</label>
+                  <input id="email" className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="alice@exemple.io" autoComplete="email" required disabled={busy} />
+                </div>
+                <div className="field">
+                  <label htmlFor="password">Mot de passe</label>
+                  <input id="password" className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" required disabled={busy} />
+                </div>
+              </>
             )}
 
             {mode === "signup" && captchaChallenge && (
@@ -373,8 +450,25 @@ export default function LoginPage() {
             )}
 
             <button type="submit" className="btn btn-submit" disabled={busy}>
-              {busy ? "Veuillez patienter…" : mode === "login" ? "Se connecter" : "Créer le compte"}
+              {busy ? "Veuillez patienter…" : 
+               mode === "login" ? 
+                 (loginSubStep === "identify" ? "Continuer" : 
+                  loginSubStep === "password" ? "Se connecter" : "Confirmer la connexion") : 
+               "Créer le compte"}
             </button>
+
+            {mode === "login" && loginSubStep === "mfa" && (
+              <div style={{ textAlign: "center", marginTop: "14px" }}>
+                <button
+                  type="button"
+                  onClick={() => { setLoginSubStep("password"); setError(""); setMfaCode(""); }}
+                  style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: "13.5px", textDecoration: "underline" }}
+                  disabled={busy}
+                >
+                  ← Retour au mot de passe
+                </button>
+              </div>
+            )}
           </form>
 
           {error && <p className="alert alert--err" style={{ marginTop: "16px" }}>{error}</p>}

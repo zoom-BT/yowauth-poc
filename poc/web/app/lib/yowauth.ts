@@ -167,16 +167,61 @@ export async function signUpAndVerify(
   });
 }
 
-/** Connexion par identifiant + mot de passe → session (token + profil + organisations). */
-export async function login(principal: string, password: string): Promise<Session> {
+/** Connexion par identifiant + mot de passe → session (token + profil + organisations) ou défi MFA. */
+export async function login(
+  principal: string,
+  password: string
+): Promise<Session | { mfaRequired: true; mfaToken: string; channel: string; codePreview: string | null }> {
   const res = await api<{
-    accessToken: string;
+    nextStep?: string;
+    mfaToken?: string;
+    channel?: string;
+    codePreview?: string | null;
+    accessToken?: string;
     sharedSession?: { token: string };
     organizations?: Organization[];
   } & Profile>(`/api/auth/login`, {
     method: "POST",
     headers: baseHeaders,
     body: JSON.stringify({ principal, password }),
+  });
+  const d = res.data;
+  if (d.nextStep === "CONFIRM_MFA") {
+    return {
+      mfaRequired: true,
+      mfaToken: d.mfaToken!,
+      channel: d.channel!,
+      codePreview: d.codePreview ?? null,
+    };
+  }
+  return {
+    accessToken: d.accessToken!,
+    ssoToken: d.sharedSession?.token ?? "",
+    organizations: d.organizations ?? [],
+    profile: {
+      id: d.id,
+      username: d.username,
+      email: d.email,
+      status: d.status,
+      plan: d.plan,
+      accountType: d.accountType,
+      emailVerified: d.emailVerified,
+      actorId: d.actorId,
+      tenantId: d.tenantId,
+    },
+  };
+}
+
+/** Finalise la connexion par MFA. */
+export async function confirmLoginMfa(mfaToken: string, code: string): Promise<Session> {
+  const res = await api<{
+    accessToken: string;
+    sharedSession?: { token: string };
+    organizations?: Organization[];
+  } & Profile>(`/api/auth/login/mfa/confirm`, {
+    method: "POST",
+    headers: baseHeaders,
+    body: JSON.stringify({ mfaToken, code }),
   });
   const d = res.data;
   return {
@@ -195,6 +240,130 @@ export async function login(principal: string, password: string): Promise<Sessio
       tenantId: d.tenantId,
     },
   };
+}
+
+/** Identifie l'utilisateur avant connexion (2-step). */
+export async function identify(principal: string): Promise<{ accountExists: boolean; nextStep: string; matchingAccountCount: number }> {
+  const res = await api<{ principal: string; accountExists: boolean; nextStep: string; matchingAccountCount: number }>(
+    `/api/auth/identify`,
+    {
+      method: "POST",
+      headers: baseHeaders,
+      body: JSON.stringify({ principal }),
+    }
+  );
+  return res.data;
+}
+
+/** Sélectionne le contexte (organisation) et récupère un token contextualisé. */
+export async function selectContext(sToken: string, contextId: string, organizationId: string): Promise<{ tenantId: string; organizationId: string; loginResponse: { accessToken: string; sharedSession?: { token: string }; organizations?: Organization[] } & Profile }> {
+  const res = await api<{
+    tenantId: string;
+    organizationId: string;
+    loginResponse: {
+      accessToken: string;
+      sharedSession?: { token: string };
+      organizations?: Organization[];
+    } & Profile;
+  }>(`/api/auth/select-context`, {
+    method: "POST",
+    headers: baseHeaders,
+    body: JSON.stringify({ selectionToken: sToken, contextId, organizationId }),
+  });
+  return res.data;
+}
+
+/** Met à jour le plan d'abonnement (comptes connectés). */
+export async function updatePlan(accessToken: string, plan: string): Promise<Profile> {
+  const res = await api<Profile>(`/api/users/me/plan`, {
+    method: "PUT",
+    headers: { ...baseHeaders, Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ plan }),
+  });
+  return res.data;
+}
+
+/** Met à jour l'étape d'onboarding (comptes connectés). */
+export async function updateOnboarding(accessToken: string, step: number, status: string): Promise<Profile> {
+  const res = await api<Profile>(`/api/users/me/onboarding`, {
+    method: "PUT",
+    headers: { ...baseHeaders, Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ step, status }),
+  });
+  return res.data;
+}
+
+/** Initie l'activation du MFA (comptes connectés). */
+export async function enableMfa(accessToken: string, channel: string): Promise<{ token: string; codePreview: string | null }> {
+  const res = await api<{ deliveryMode: string; token: string; codePreview: string | null; expiresInSeconds: number }>(
+    `/api/auth/mfa/enable`,
+    {
+      method: "POST",
+      headers: { ...baseHeaders, Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ channel }),
+    }
+  );
+  return res.data;
+}
+
+/** Valide et active le MFA. */
+export async function confirmMfa(accessToken: string, challengeToken: string, code: string): Promise<Profile> {
+  const res = await api<Profile>(`/api/auth/mfa/confirm`, {
+    method: "POST",
+    headers: { ...baseHeaders, Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ challengeToken, code }),
+  });
+  return res.data;
+}
+
+/** Désactive le MFA. */
+export async function disableMfa(accessToken: string): Promise<Profile> {
+  const res = await api<Profile>(`/api/auth/mfa/disable`, {
+    method: "POST",
+    headers: { ...baseHeaders, Authorization: `Bearer ${accessToken}` },
+  });
+  return res.data;
+}
+
+/** OIDC Token Exchange (RFC 8693) — Échange le SSO Token contre un jeton d'accès de service. */
+export async function exchangeToken(ssoToken: string, contextId: string, serviceCode: string): Promise<{ access_token: string; token_type: string; expires_in: number; scope: string }> {
+  const form = new URLSearchParams({
+    grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
+    subject_token: ssoToken,
+    subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
+    context_id: contextId,
+    service_code: serviceCode,
+    client_id: config.CLIENT_ID,
+    client_secret: config.API_KEY,
+  });
+
+  const res = await resilientFetch(`/oauth2/token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: form.toString(),
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(`Token Exchange failed (HTTP ${res.status}): ${text}`);
+  }
+  return JSON.parse(text);
+}
+
+/** Récupère les infos OIDC userinfo via le jeton de service. */
+export async function fetchUserInfo(serviceToken: string): Promise<Record<string, unknown>> {
+  const res = await resilientFetch(`/oauth2/userinfo`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${serviceToken}`
+    }
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(`UserInfo failed (HTTP ${res.status}): ${text}`);
+  }
+  return JSON.parse(text);
 }
 
 /** Récupère le profil courant à partir d'un access token (bearer). */
