@@ -1,0 +1,306 @@
+\PassOptionsToPackage{draft}{minted}
+\documentclass[
+  %options...
+]{IPLeiriaThesis}
+
+% Définition des métadonnées requises par le template IPLeiriaThesis
+\title{Rapport d'Analyse et Conception\\Module YowAuth (auth-core)}
+\author{Tchoutzine Tchetnkou albino .C (Matricule : 22P387)}
+\date{\today}
+
+% Métadonnées académiques & Professionnelles (ENSPY)
+\supervisor{Pr. Eng Thomas Djotio}
+\cosupervisor{M. Tsafack Fotso Savio} % Chef de projet / Manager
+\school{École Nationale Supérieure Polytechnique de Yaoundé (ENSPY)}
+\logo{logo_enspy.png}
+\department{Département de Génie Informatique}
+\degree{Génie Informatique -- Spécialité Réseaux Mobiles et Intelligents}
+
+% Charge les packages supplémentaires nécessaires
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+
+% Couleurs de la charte graphique ENSPY / Navy
+\definecolor{enspynavy}{HTML}{1F3A5F}
+\definecolor{rtgray}{HTML}{6B7280}
+\definecolor{rtlight}{HTML}{EEF2F7}
+\definecolor{rtcode}{HTML}{0B1021}
+\definecolor{rtaccent}{HTML}{2563EB}
+
+\newtcolorbox{rolebox}[1][]{
+  colback=rtlight, colframe=enspynavy, boxrule=0.8pt, arc=2pt,
+  left=8pt,right=8pt,top=6pt,bottom=6pt, #1}
+
+\newtcolorbox{invbox}[1][Invariants]{
+  enhanced, colback=white, colframe=enspynavy!70, boxrule=0.6pt, arc=1pt,
+  title=#1, coltitle=white, colbacktitle=enspynavy,
+  fonttitle=\bfseries, left=8pt,right=8pt,top=6pt,bottom=6pt}
+
+\newtcolorbox{notebox}{
+  colback=rtlight!60, colframe=rtaccent, boxrule=0pt,
+  leftrule=3pt, arc=0pt, left=8pt,right=8pt,top=5pt,bottom=5pt}
+
+\lstdefinestyle{shell}{
+  backgroundcolor=\color{rtcode}, basicstyle=\ttfamily\scriptsize\color{white},
+  breaklines=true, columns=fullflexible, frame=none,
+  keywordstyle=\color{cyan}, stringstyle=\color{green!60!white},
+  showstringspaces=false, xleftmargin=6pt, xrightmargin=6pt,
+  framexleftmargin=6pt, aboveskip=8pt, belowskip=8pt}
+\lstset{style=shell}
+
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\httpget}{\textcolor{white}{\colorbox{rtaccent}{\scriptsize\ttfamily\,GET\,}}}
+\newcommand{\httppost}{\textcolor{white}{\colorbox{green!45!black}{\scriptsize\ttfamily\,POST\,}}}
+\newcommand{\httpput}{\textcolor{white}{\colorbox{orange!80!black}{\scriptsize\ttfamily\,PUT\,}}}
+
+\begin{document}
+
+\maketitle
+
+%=====================================================================
+% FRONT MATTER
+%=====================================================================
+\pagenumbering{roman}
+
+\chapter*{Résumé}
+Ce rapport présente l'analyse technique et la conception du module \textbf{\code{auth-core}} (nommé YowAuth) de la plateforme RT-Comops Backend, dans le cadre de l'UE Réseaux Mobiles et Intelligents de l'École Nationale Supérieure Polytechnique de Yaoundé (ENSPY). Le module a été développé selon les principes de l'architecture hexagonale en utilisant Spring Boot WebFlux pour sa nature réactive. YowAuth sépare l'identité humaine (\code{Actor}) du compte d'authentification (\code{UserAccount}). Il intègre des mécanismes rigoureux de sécurité : signature asymétrique de jetons JWT RS256, validation de clés publiques via JWKS, double authentification (MFA OTP par e-mail) et flux de Single Sign-On (SSO) conforme à la spécification OAuth2 Token-Exchange (RFC 8693). Une application Next.js a été réalisée pour démontrer et valider visuellement ces interactions en local et en production.
+
+\vspace{1.5cm}
+
+\chapter*{Abstract}
+This report describes the technical analysis and design of the \textbf{\code{auth-core}} module (named YowAuth) of the RT-Comops Backend platform, as part of the Mobile and Intelligent Networks course at the National Advanced School of Engineering of Yaounde (ENSPY). Developed using hexagonal architecture and Spring Boot WebFlux for reactive operations, YowAuth strictly separates human identity (\code{Actor}) from authentication credentials (\code{UserAccount}). It integrates state-of-the-art security features: asymmetric RS256 JWT signature, public key resolution via JWKS, multi-factor authentication (MFA OTP via email), and Single Sign-On (SSO) token exchange flows (RFC 8693). A Next.js client interface was built to demonstrate and visually validate these interactions in both development and production environments.
+
+\tableofcontents
+\listoffigures
+\listoftables
+\cleardoublepage
+
+%=====================================================================
+% MAIN MATTER
+%=====================================================================
+\pagenumbering{arabic}
+
+%---------------------------------------------------------------------
+% Chapitre 1 : Introduction
+%---------------------------------------------------------------------
+\chapter{Introduction}
+
+\section{Objet du document}
+Ce rapport décrit l'analyse et la conception du module \textbf{\code{auth-core}} (nommé \emph{YowAuth}) de la plateforme RT-Comops Backend. Il constitue le document de référence technique et fonctionnelle du sous-système d'authentification : modèle de domaine, ports et adaptateurs, cas d'usage, diagrammes de séquence, invariants métier, surface d'API exposée, mécanismes de sécurité (JWT RS256, JWKS, OIDC) et stratégie de vérification.
+
+Ce projet a été réalisé au sein du département Génie Informatique de l'École Nationale Supérieure Polytechnique de Yaoundé (ENSPY) pour l'UE Réseaux Mobiles et Intelligents supervisée par le Pr. Eng Thomas Djotio, sous la gestion de projet de M. Tsafack Fotso Savio.
+
+\section{Positionnement de YowAuth dans le Kernel}
+La plateforme RT-Comops est un monolithe modulaire fondé sur une architecture hexagonale, organisé en plusieurs \emph{cores} fonctionnels plus un module de démarrage exécutable. Le module \code{auth-core} appartient au domaine \emph{Identité \& Accès}, aux côtés de \code{actor-core} (identités physiques) et \code{roles-core} (contrôle d'accès basé sur les rôles - RBAC).
+
+\begin{rolebox}
+\textbf{Séparation des concepts :} YowAuth sépare l'identité humaine (\code{Actor}, gérée par \code{actor-core}) du compte d'authentification (\code{UserAccount}). La signature RS256 des JWT et l'exposition du JWKS restent portées par \code{kernel-core} ; \code{auth-core} orchestre l'émission, la sélection de contexte, les challenges de sécurité et l'exposition OIDC après authentification réussie et résolution des permissions.
+\end{rolebox}
+
+\section{Périmètre fonctionnel}
+Le module couvre le cycle IAM (Identity and Access Management) complet :
+\begin{itemize}
+  \item Création et cycle de vie des comptes \code{UserAccount}.
+  \item Authentification locale tenant-scoped et découverte globale de contextes d'organisations.
+  \item Sélection de contexte de tenant ou d'organisation.
+  \item Émission d'un jeton d'accès JWT RS256 enrichi des privilèges et rôles.
+  \item Self-service utilisateur (gestion de profil, plan d'abonnement et statut d'onboarding).
+  \item Flux de challenge et de durcissement (CAPTCHA, OTP, MFA par e-mail).
+  \item Fournisseur OIDC central (métadonnées OIDC, token-exchange, userinfo, introspection, JWKS).
+\end{itemize}
+
+%---------------------------------------------------------------------
+% Chapitre 2 : Architecture et Conception du Core
+%---------------------------------------------------------------------
+\chapter{Architecture et Conception du Core}
+
+\section{Architecture hexagonale}
+Le module suit la structure hexagonale canonique. Le domaine ne connaît ni les technologies de transport (Web Flux) ni la persistance (bases relationnelles R2DBC). Il communique uniquement à travers des ports d'entrée et de sortie.
+
+\subsection{Couches applicatives et packages}
+\begin{center}
+\small
+\begin{longtable}{@{}p{4cm}p{10cm}@{}}
+\toprule
+\textbf{Couche / Package} & \textbf{Contenu} \\
+\midrule
+\code{domain.model} & Agrégat \code{UserAccount}, invariants métier, énumérations de statut. \\
+\code{application.port.in} & Cas d'usage entrants (\code{LoginUseCase}, \code{RegisterUserUseCase}, \code{PublicSignUpUseCase}, \code{DiscoverLoginContextsUseCase}). \\
+\code{application.port.out} & Ports sortants : \code{UserAccountRepository}, \code{RefreshTokenRepository}, \code{UserOrganizationAccessDirectory}. \\
+\code{application.service} & Orchestration : \code{AuthApplicationService}, \code{AuthContextApplicationService}, \code{AuthOidcService}, \code{AuthSharedSessionService}. \\
+\code{adapter.in.web} & Contrôleurs WebFlux (\code{AuthController}, \code{AuthOidcController}) et objets de transfert de données (DTO). \\
+\code{adapter.out.persistence} & Implémentation de la persistance (R2DBC H2/PostgreSQL). \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\subsection{Ports sortants et découplage}
+Trois ports d'interface principaux découplent \code{auth-core} des autres domaines du Kernel :
+\begin{itemize}
+  \item \code{UserAccountRepository} : Persistance réactive des comptes.
+  \item \code{UserOrganizationAccessDirectory} : Liste des organisations accessibles par un utilisateur.
+  \item \code{SignUpContextDirectory} : Résolution des contextes de rattachement lors d'un enregistrement.
+\end{itemize}
+
+\section{Modèle de Domaine et Invariants}
+L'agrégat central du domaine est la classe immuable \code{UserAccount}. Chaque modification d'état (activation du MFA, changement de plan, vérification d'email) produit une nouvelle instance de l'entité, garantissant la sûreté de la programmation réactive multitâche.
+
+\begin{invbox}[Invariants clés de YowAuth]
+\begin{itemize}
+  \item L'identifiant (\code{username}) et l'adresse email (\code{email}) sont uniques par Tenant et normalisés en minuscules.
+  \item Le hachage du mot de passe (\code{passwordHash}) utilise l'algorithme BCrypt.
+  \item L'accès d'un utilisateur dont le MFA est activé ne doit pas renvoyer de session JWT finale avant la validation réussie du défi OTP.
+  \item Les comptes suspendus ou désactivés (\code{status = 'DEACTIVATED'|'SUSPENDED'}) voient leur accès systématiquement bloqué lors de l'authentification.
+\end{itemize}
+\end{invbox}
+
+\section{Diagramme des cas d'utilisation}
+Les rôles sont distribués entre trois acteurs :
+\begin{itemize}
+  \item \textbf{Administrateur IAM} : Enregistre de nouveaux comptes via des accès d'administration sécurisés.
+  \item \textbf{Utilisateur final} : Se connecte, configure son MFA, modifie son forfait et consulte son profil.
+  \item \textbf{Applications clientes backend} : Réalisent le Token Exchange et valident les jetons de session.
+\end{itemize}
+
+%---------------------------------------------------------------------
+% Chapitre 3 : Surface d'API et Sécurité
+%---------------------------------------------------------------------
+\chapter{Surface d'API et Sécurité}
+
+\section{Endpoints de l'API d'Authentification}
+Les services exposés par YowAuth sont sécurisés par l'authentification applicative backend (\code{X-Client-Id} et \code{X-Api-Key}).
+
+\begin{center}
+\small
+\begin{longtable}{@{}p{1.2cm}p{6cm}p{7cm}@{}}
+\toprule
+\textbf{Méthode} & \textbf{Chemin} & \textbf{Description / Rôle} \\
+\midrule
+POST & \code{/api/auth/identify} & Vérification initiale de l'identifiant utilisateur (2 étapes). \\
+POST & \code{/api/auth/login} & Connexion locale (mot de passe ou déclenchement MFA). \\
+POST & \code{/api/auth/login/mfa/confirm} & Validation du défi MFA OTP. \\
+POST & \code{/api/auth/discover-contexts} & Lister les tenants associés \\
+POST & \code{/api/auth/select-context} & Sélection finale du contexte de connexion. \\
+POST & \code{/api/auth/sign-up} & Inscription publique en libre-service. \\
+PUT  & \code{/api/users/me/plan} & Changement de plan d'abonnement (forfait). \\
+POST & \code{/api/auth/mfa/enable|confirm|disable} & Gestion du cycle de vie du MFA par l'utilisateur. \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\section{Mécanismes de Sécurité}
+
+\subsection{Signature asymétrique RS256 et JWKS}
+Pour éliminer le besoin de partager des clés secrètes entre les microservices du Kernel, YowAuth utilise le standard de signature asymétrique **RS256**. 
+* Le Kernel utilise une **clé privée** pour signer les jetons d'accès JWT.
+* Les microservices ou applications clientes externes téléchargent périodiquement la **clé publique** correspondante via l'endpoint public d'ensemble de clés JWK (\code{/.well-known/jwks.json}) afin de valider localement et hors-ligne l'authenticité et l'intégrité des jetons.
+
+\subsection{Flux Single Sign-On (SSO) par Token Exchange}
+Le Single Sign-On s'appuie sur la spécification standard **OAuth2 Token Exchange (RFC 8693)**. Ce mécanisme permet à une application de confiance d'échanger le jeton de session principal obtenu par l'utilisateur contre un jeton d'accès spécifique à un service métier :
+\begin{lstlisting}[caption={Payload d'échange auprès de /oauth2/token}]
+curl -X POST https://kernel-core.yowyob.com/oauth2/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
+  --data-urlencode "subject_token=$SSO_TOKEN" \
+  --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:jwt" \
+  --data-urlencode "context_id=$ORGANIZATION_ID" \
+  --data-urlencode "service_code=SALES" \
+  --data-urlencode "client_id=$CLIENT_ID" \
+  --data-urlencode "client_secret=$CLIENT_SECRET"
+\end{lstlisting}
+Le jeton de service retourné est ensuite transmis dans l'en-tête de requête \code{Authorization: Bearer <token>} pour interroger l'endpoint d'informations du profil OIDC \code{/oauth2/userinfo} et autoriser l'utilisateur sur la plateforme cible.
+
+%---------------------------------------------------------------------
+% Chapitre 4 : Intégration du Client de Démonstration (POC)
+%---------------------------------------------------------------------
+\chapter{Intégration du Client de Démonstration (POC)}
+
+\section{Architecture Next.js du Frontend}
+Pour illustrer et valider les capacités de YowAuth, une interface client de démonstration moderne a été développée en **Next.js** et intégrée en local (\code{http://localhost:3000}) et en production (\code{https://yowauth-poc.vercel.app}).
+
+L'interface consomme directement les API réactives du Kernel et propose un parcours utilisateur complet de bout en bout.
+
+\section{Parcours d'authentification en deux étapes}
+L'ergonomie de connexion a été soignée en séparant l'identification de l'authentification :
+\begin{enumerate}
+  \item **Identification** : L'utilisateur saisit son identifiant. L'application vérifie son existence via \code{/api/auth/identify}.
+  \item **Saisie du Mot de passe** : Si l'identifiant est correct, le champ mot de passe apparaît. 
+  \item **Gestion du Défi MFA** : Si le serveur retourne un code d'état \code{202 Accepted} (indiquant que la double authentification est requise pour ce compte), l'application bascule sur l'interface OTP. L'utilisateur reçoit un code par e-mail et le valide pour obtenir son jeton de session final.
+\end{enumerate}
+
+\begin{figure}[h]
+  \centering
+  % \includegraphics[width=0.85\linewidth]{figures/poc-login-steps.png}
+  \fbox{\parbox{0.9\linewidth}{\centering\vspace{1.2cm}\itshape\color{rtgray}
+  Capture d'écran -- Connexion en 2 étapes (Identification \& Mot de passe)\\[4pt]
+  (Placer l'image dans \texttt{figures/poc-login-steps.png})\vspace{1.2cm}}}
+  \caption{Écran d'identification initiale et de saisie sécurisée du mot de passe.}
+  \label{fig:poc-login-steps}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  % \includegraphics[width=0.85\linewidth]{figures/poc-login-mfa.png}
+  \fbox{\parbox{0.9\linewidth}{\centering\vspace{1.2cm}\itshape\color{rtgray}
+  Capture d'écran -- Saisie du code de double authentification (MFA OTP)\\[4pt]
+  (Placer l'image dans \texttt{figures/poc-login-mfa.png})\vspace{1.2cm}}}
+  \caption{Écran de défi MFA OTP pour valider la session.}
+  \label{fig:poc-login-mfa}
+\end{figure}
+
+\section{Tableau de bord et Centre de Profil (IHM Professionnelle)}
+Après authentification, l'utilisateur est redirigé vers un tableau de bord professionnel structuré en une disposition responsive à **deux colonnes** :
+\begin{itemize}
+  \item **Colonne principale (Gauche)** : Affiche les tuiles des applications métiers actives de l'organisation courante. Ces tuiles ont été améliorées en remplaçant les anciens émojis par de grands visuels de haute qualité représentant la diversité et le professionnalisme des équipes.
+  \item **Barre latérale (Droite)** : Regroupe le centre de profil de l'utilisateur connecté, le sélecteur dynamique de forfait d'abonnement (liant l'action à \code{PUT /users/me/plan}), l'enrôlement ou la désactivation de la double authentification MFA en temps réel, et un inspecteur de jeton JWT déchiffré.
+\end{itemize}
+
+\begin{figure}[h]
+  \centering
+  % \includegraphics[width=0.9\linewidth]{figures/poc-dashboard.png}
+  \fbox{\parbox{0.95\linewidth}{\centering\vspace{1.5cm}\itshape\color{rtgray}
+  Capture d'écran -- Tableau de bord principal à deux colonnes\\[4pt]
+  (Placer l'image dans \texttt{figures/poc-dashboard.png})\vspace{1.5cm}}}
+  \caption{Disposition responsive en grille du tableau de bord d'applications et du profil utilisateur.}
+  \label{fig:poc-dashboard}
+\end{figure}
+
+\section{Simulateur OIDC SSO Terminal}
+Pour rendre visibles les processus invisibles du protocole OAuth2 / OIDC, le clic sur une application active intercepte la navigation et ouvre une modale de **simulateur SSO interactif**.
+Cette modale simule le comportement d'une application tierce qui s'intègre avec YowAuth. Elle affiche une console de débogage qui trace en temps réel les appels réseau :
+1. L'échange du jeton de session principal contre un jeton de service via le **Token Exchange** (\code{/oauth2/token}).
+2. La récupération du profil d'identité utilisateur via l'introspection du jeton (\code{/oauth2/userinfo}).
+Cette approche pédagogique permet aux développeurs de comprendre le fonctionnement interne du SSO de YowAuth.
+
+\begin{figure}[h]
+  \centering
+  % \includegraphics[width=0.85\linewidth]{figures/poc-sso-modal.png}
+  \fbox{\parbox{0.9\linewidth}{\centering\vspace{1.2cm}\itshape\color{rtgray}
+  Capture d'écran -- Console interactive du simulateur SSO OIDC\\[4pt]
+  (Placer l'image dans \texttt{figures/poc-sso-modal.png})\vspace{1.2cm}}}
+  \caption{Console technique illustrant le Token Exchange et la récupération UserInfo.}
+  \label{fig:poc-sso-modal}
+\end{figure}
+
+%---------------------------------------------------------------------
+% Chapitre 5 : Conclusion
+%---------------------------------------------------------------------
+\chapter{Conclusion}
+Le module \code{auth-core} (YowAuth) fournit un système d'authentification robuste, moderne et standardisé pour l'écosystème RT-Comops. En appliquant les principes de l'architecture hexagonale et en tirant profit de Spring Boot WebFlux, il garantit un traitement hautement performant et découplé des problématiques de transport et de persistance.
+
+Les travaux menés au cours de ce projet à l'École Nationale Supérieure Polytechnique de Yaoundé (ENSPY) sous la direction du Pr. Eng Thomas Djotio et la coordination de M. Tsafack Fotso Savio ont permis d'atteindre l'ensemble des objectifs fixés :
+\begin{itemize}
+  \item Une modélisation stricte de l'agrégat \code{UserAccount} découplé des entités physiques de profil.
+  \item La mise en œuvre d'un parcours de connexion en 2 étapes sécurisé avec détection dynamique de compte.
+  \item Le durcissement de la sécurité par l'intégration d'un double facteur d'authentification (MFA OTP).
+  \item L'alignement sur les standards OIDC à travers le mécanisme de Token Exchange (RFC 8693).
+  \item Le développement d'une application de démonstration Next.js interactive et visuelle qui fait office de vitrine d'intégration.
+\end{itemize}
+
+Les perspectives d'évolution de YowAuth incluent l'extension du support MFA aux clés de sécurité physiques (FIDO2/WebAuthn), l'intégration native avec un serveur SMTP pour l'envoi d'e-mails réels en environnement de production, et le développement complet du back-office d'administration pour la désactivation ou la suspension des comptes à distance par les administrateurs système.
+
+\end{document}
