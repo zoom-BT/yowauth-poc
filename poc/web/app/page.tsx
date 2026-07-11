@@ -7,14 +7,17 @@ import { useSession, saveSession } from "./lib/session";
 import { PLATFORMS, accessiblePlatforms, otherPlatforms, type Platform } from "./lib/platforms";
 import SiteFooter from "./components/SiteFooter";
 
-/** Comparaison système Yowyob/KSM vs plateformes tout-en-un (Odoo & similaires). */
+/** Comparaison système Yowyob/KSM vs ERP tout-en-un (Odoo, ERPNext & similaires).
+ *  Critères tirés du code réel du core (architecture hexagonale, stack réactive,
+ *  gouvernance de plateforme, comptabilité OHADA). */
 const COMPARISON: { crit: string; yow: string; other: string }[] = [
-  { crit: "Architecture", yow: "Microservices modulaires indépendants (chaque service déployable seul)", other: "Monolithe applicatif à modules" },
-  { crit: "Identité / SSO", yow: "IdP centralisé OIDC natif, JWT RS256 — un seul compte pour tout l'écosystème", other: "Authentification intégrée à l'application" },
-  { crit: "Multi-organisation", yow: "Native au cœur (multi-tenant + multi-org)", other: "Via instances / configuration" },
-  { crit: "Conformité", yow: "OHADA native", other: "Localisation à configurer" },
-  { crit: "Souveraineté des données", yow: "Hébergement en Afrique", other: "Cloud éditeur (souvent hors zone)" },
-  { crit: "Intégration externe", yow: "API-first, token-exchange service-à-service (RFC 8693)", other: "API disponible, plus couplée" },
+  { crit: "Architecture", yow: "Monolithe modulaire à architecture hexagonale — frontières inter-modules vérifiées automatiquement en CI, modules extractibles via ports/adapters", other: "Monolithe couplé au framework (ORM Odoo, métadonnées Frappe/ERPNext)" },
+  { crit: "Identité & SSO", yow: "Cœur d'identité OIDC natif, JWT RS256, token-exchange service-à-service (RFC 8693) — un seul compte pour tout l'écosystème", other: "Authentification applicative intégrée, SSO via modules tiers" },
+  { crit: "Multi-tenant / organisation / agence", yow: "Natif : tenant → organisation → agence, RBAC multi-scope (SYSTEM / TENANT / ORGANIZATION / AGENCY)", other: "Multi-société via instances ou configuration" },
+  { crit: "Gouvernance & quotas", yow: "Abonnements par service et quotas mesurés au cœur (backend + organisation), entitlements par organisation", other: "Pas de couche d'abonnement / quotas par service au cœur" },
+  { crit: "Stack technique", yow: "Réactive non-bloquante de bout en bout (Spring WebFlux + R2DBC PostgreSQL)", other: "Synchrone (Python / WSGI)" },
+  { crit: "Intégration événementielle", yow: "Event-driven avec outbox transactionnel, relay Kafka (retry / backoff / dead-letter) et projections de recherche", other: "Webhooks / API, sans outbox transactionnel natif" },
+  { crit: "Comptabilité", yow: "OHADA / SYSCOHADA native (plan comptable, journaux, balance, bilan, compte de résultat)", other: "Localisation comptable via modules tiers" },
 ];
 
 function PlatformIcon({ icon, name, className }: { icon: string; name: string; className?: string }) {
@@ -135,8 +138,8 @@ function Landing() {
 
         <div className="cmp">
           <div className="cmp__head">
-            <h3>Yowyob face aux plateformes tout-en-un</h3>
-            <p>Là où Odoo &amp; les suites classiques regroupent tout dans une seule application, Yowyob s&apos;appuie sur un cœur d&apos;identité et des services modulaires.</p>
+            <h3>Yowyob face aux ERP tout-en-un</h3>
+            <p>Yowyob n&apos;est pas un ERP de plus : c&apos;est un cœur d&apos;identité et de gouvernance sur lequel se greffent des modules métier à frontières hexagonales strictes, vérifiées automatiquement.</p>
           </div>
           <div className="cmp__scroll">
             <table>
@@ -144,7 +147,7 @@ function Landing() {
                 <tr>
                   <th>Critère</th>
                   <th className="cmp__yowcol">Yowyob / KSM</th>
-                  <th>Odoo &amp; plateformes tout-en-un</th>
+                  <th>Odoo, ERPNext &amp; suites classiques</th>
                 </tr>
               </thead>
               <tbody>
