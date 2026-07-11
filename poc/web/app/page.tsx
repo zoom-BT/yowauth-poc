@@ -7,17 +7,13 @@ import { useSession, saveSession } from "./lib/session";
 import { PLATFORMS, accessiblePlatforms, otherPlatforms, type Platform } from "./lib/platforms";
 import SiteFooter from "./components/SiteFooter";
 
-/** Comparaison système Yowyob/KSM vs ERP tout-en-un (Odoo, ERPNext & similaires).
- *  Critères tirés du code réel du core (architecture hexagonale, stack réactive,
- *  gouvernance de plateforme, comptabilité OHADA). */
+/** Pourquoi Yowyob plutôt qu'un ERP classique — formulé côté usage utilisateur. */
 const COMPARISON: { crit: string; yow: string; other: string }[] = [
-  { crit: "Architecture", yow: "Monolithe modulaire à architecture hexagonale — frontières inter-modules vérifiées automatiquement en CI, modules extractibles via ports/adapters", other: "Monolithe couplé au framework (ORM Odoo, métadonnées Frappe/ERPNext)" },
-  { crit: "Identité & SSO", yow: "Cœur d'identité OIDC natif, JWT RS256, token-exchange service-à-service (RFC 8693) — un seul compte pour tout l'écosystème", other: "Authentification applicative intégrée, SSO via modules tiers" },
-  { crit: "Multi-tenant / organisation / agence", yow: "Natif : tenant → organisation → agence, RBAC multi-scope (SYSTEM / TENANT / ORGANIZATION / AGENCY)", other: "Multi-société via instances ou configuration" },
-  { crit: "Gouvernance & quotas", yow: "Abonnements par service et quotas mesurés au cœur (backend + organisation), entitlements par organisation", other: "Pas de couche d'abonnement / quotas par service au cœur" },
-  { crit: "Stack technique", yow: "Réactive non-bloquante de bout en bout (Spring WebFlux + R2DBC PostgreSQL)", other: "Synchrone (Python / WSGI)" },
-  { crit: "Intégration événementielle", yow: "Event-driven avec outbox transactionnel, relay Kafka (retry / backoff / dead-letter) et projections de recherche", other: "Webhooks / API, sans outbox transactionnel natif" },
-  { crit: "Comptabilité", yow: "OHADA / SYSCOHADA native (plan comptable, journaux, balance, bilan, compte de résultat)", other: "Localisation comptable via modules tiers" },
+  { crit: "Un seul compte", yow: "Un identifiant unique pour toutes vos activités — ventes, stock, RH, comptabilité…", other: "Souvent un compte ou une connexion par application" },
+  { crit: "Plusieurs entreprises & agences", yow: "Gérez plusieurs sociétés et agences depuis un seul espace, avec des droits par personne", other: "Multi-société à mettre en place, souvent technique" },
+  { crit: "Services à la carte", yow: "Activez seulement les modules utiles — vous ne payez pas le superflu", other: "Modules souvent installés et facturés en bloc" },
+  { crit: "Tout reste synchronisé", yow: "Une vente met à jour le stock, la caisse et la comptabilité automatiquement", other: "Synchronisation à paramétrer entre les modules" },
+  { crit: "Comptabilité prête pour l'Afrique", yow: "Comptabilité conforme OHADA prête à l'emploi, sans extension", other: "Comptabilité OHADA via une localisation ou un plugin" },
 ];
 
 function PlatformIcon({ icon, name, className }: { icon: string; name: string; className?: string }) {
@@ -138,16 +134,16 @@ function Landing() {
 
         <div className="cmp">
           <div className="cmp__head">
-            <h3>Yowyob face aux ERP tout-en-un</h3>
-            <p>Yowyob n&apos;est pas un ERP de plus : c&apos;est un cœur d&apos;identité et de gouvernance sur lequel se greffent des modules métier à frontières hexagonales strictes, vérifiées automatiquement.</p>
+            <h3>Pourquoi Yowyob plutôt qu&apos;un ERP classique&nbsp;?</h3>
+            <p>Odoo, ERPNext et les ERP classiques sont puissants, mais pensés « logiciel ». Yowyob part de vos usages : un compte, vos entreprises, et seulement les services dont vous avez besoin.</p>
           </div>
           <div className="cmp__scroll">
             <table>
               <thead>
                 <tr>
                   <th>Critère</th>
-                  <th className="cmp__yowcol">Yowyob / KSM</th>
-                  <th>Odoo, ERPNext &amp; suites classiques</th>
+                  <th className="cmp__yowcol">Yowyob</th>
+                  <th>Odoo, ERPNext &amp; ERP classiques</th>
                 </tr>
               </thead>
               <tbody>
