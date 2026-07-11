@@ -6,3 +6,8 @@ node_modules/
 .env.local
 *.iml
 .idea/
+
+# Fichiers lourds / references non versionnees
+KSM_Kernel_Layer-master_front_end/
+KSM_Kernel_Layer-master_front_end.zip
+*.zip
