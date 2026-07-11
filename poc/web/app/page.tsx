@@ -176,6 +176,8 @@ function Launcher({ session }: { session: Session }) {
   const orgs = session.organizations;
   const [orgIdx, setOrgIdx] = useState(0);
   const org = orgs[orgIdx];
+  // Un compte peut n'avoir aucune organisation rattachée : label de repli, jamais d'accès direct.
+  const orgLabel = org?.shortName ?? org?.organizationCode ?? "Mon espace";
   const mine = useMemo(() => accessiblePlatforms(org?.services ?? []), [org]);
   const discover = useMemo(() => otherPlatforms(org?.services ?? []), [org]);
   const [showSession, setShowSession] = useState(false);
@@ -383,7 +385,7 @@ function Launcher({ session }: { session: Session }) {
         <div>
           <div className="lhead" style={{ marginBottom: "24px" }}>
             <span className="pill" style={{ textTransform: "uppercase", background: "var(--indigo-soft)", color: "var(--indigo)", padding: "4px 10px", fontSize: "11px", fontWeight: 700 }}>
-              🏢 {org.shortName}
+              🏢 {orgLabel}
             </span>
             <h1 style={{ marginTop: "10px", marginBottom: "6px" }}>Bonjour, {p.username} 👋</h1>
             <p style={{ color: "var(--muted)", fontSize: "15px" }}>
@@ -456,7 +458,7 @@ function Launcher({ session }: { session: Session }) {
                 🌟 Services Complémentaires
               </h2>
               <p style={{ color: "var(--muted)", fontSize: "13px", marginBottom: "16px" }}>
-                Services disponibles sur Yowyob non activés pour {org.shortName}.
+                Services disponibles sur Yowyob non activés pour {orgLabel}.
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "12px" }}>
                 {discover.map((pl) => (
