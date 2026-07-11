@@ -143,8 +143,26 @@ a:hover { text-decoration: underline; }
 .alert--ok { color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; }
 .authcard .foot { margin-top: 20px; text-align: center; font-size: 13px; color: var(--muted); }
 
-/* ---------- Footer ---------- */
+/* ---------- Footer (legacy simple, conservé) ---------- */
 .footer { border-top: 1px solid var(--line); margin-top: 30px; padding: 26px 0; color: var(--muted); font-size: 13px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+
+/* ---------- Footer enrichi (partagé) ---------- */
+.site-footer { border-top: 1px solid var(--line); margin-top: 48px; background: #fbfaff; }
+.site-footer__in { display: grid; grid-template-columns: 1.7fr 1fr 1fr; gap: 32px; padding: 40px 0 28px; }
+.site-footer__brand .logo { margin-bottom: 12px; }
+.site-footer__tag { color: var(--muted); font-size: 13.5px; line-height: 1.6; margin: 0 0 14px; max-width: 38ch; }
+.site-footer__badges { display: flex; gap: 8px; flex-wrap: wrap; }
+.site-footer__badge { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; color: var(--violet); background: var(--violet-soft); border: 1px solid #e6ddff; border-radius: 999px; padding: 4px 10px; }
+.site-footer__title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 12px; font-weight: 700; }
+.site-footer__col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.site-footer__col a { color: var(--ink-soft); font-size: 14px; text-decoration: none; }
+.site-footer__col a:hover { color: var(--violet); }
+.site-footer__bottom { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 16px 0 30px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; }
+@media (max-width: 860px) {
+  .site-footer__in { grid-template-columns: 1fr 1fr; }
+  .site-footer__brand { grid-column: 1 / -1; }
+}
+@media (max-width: 540px) { .site-footer__in { grid-template-columns: 1fr; } }
 
 /* ---------- Dashboard Layout ---------- */
 .dash { display: grid; grid-template-columns: 1fr 340px; gap: 28px; padding: 40px 0; }

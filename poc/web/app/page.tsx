@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { decodeJwt, type Session, selectContext, updatePlan, enableMfa, confirmMfa, disableMfa, exchangeToken, fetchUserInfo } from "./lib/yowauth";
 import { useSession, saveSession } from "./lib/session";
 import { PLATFORMS, accessiblePlatforms, otherPlatforms, type Platform } from "./lib/platforms";
+import SiteFooter from "./components/SiteFooter";
 
 function PlatformIcon({ icon, name, className }: { icon: string; name: string; className?: string }) {
   if (icon.startsWith("http")) {
@@ -126,10 +127,7 @@ function Landing() {
         </div>
       </section>
 
-      <footer className="wrap footer">
-        <span>© Yowyob — Portail d&apos;identité (POC).</span>
-        <span>Propulsé par YowAuth · JWT RS256 · OIDC</span>
-      </footer>
+      <SiteFooter />
     </>
   );
 }
@@ -661,10 +659,7 @@ function Launcher({ session }: { session: Session }) {
         </div>
       )}
 
-      <footer className="wrap footer">
-        <span>© Yowyob — Portail d&apos;identité (POC).</span>
-        <span>Connecté via YowAuth · JWT RS256</span>
-      </footer>
+      <SiteFooter />
     </>
   );
 }

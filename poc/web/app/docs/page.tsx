@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import SiteFooter from "../components/SiteFooter";
 
 export const metadata: Metadata = {
   title: "YowAuth — Guide API (serveur réel)",
@@ -120,6 +121,7 @@ const errors: { code: string; meaning: string }[] = [
 
 export default function DocsPage() {
   return (
+    <>
     <main className="doc">
       <header className="doc__top" style={{ "--brand-img": "url(/img2.png)" } as React.CSSProperties}>
         <div className="doc__top-inner">
@@ -235,5 +237,7 @@ curl -X POST ${KERNEL}/api/auth/login \\
         </p>
       </div>
     </main>
+    <SiteFooter />
+    </>
   );
 }
