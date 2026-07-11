@@ -48,6 +48,13 @@ export default function SiteFooter() {
             <li><Link href="/demo">Démonstration</Link></li>
           </ul>
         </nav>
+
+        <nav className="site-footer__col" aria-label="Légal">
+          <h4 className="site-footer__title">Légal</h4>
+          <ul>
+            <li><Link href="/legal/conditions-utilisation">Conditions d&apos;utilisation</Link></li>
+          </ul>
+        </nav>
       </div>
 
       <div className="wrap site-footer__bottom">

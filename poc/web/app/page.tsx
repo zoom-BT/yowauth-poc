@@ -7,6 +7,16 @@ import { useSession, saveSession } from "./lib/session";
 import { PLATFORMS, accessiblePlatforms, otherPlatforms, type Platform } from "./lib/platforms";
 import SiteFooter from "./components/SiteFooter";
 
+/** Comparaison système Yowyob/KSM vs plateformes tout-en-un (Odoo & similaires). */
+const COMPARISON: { crit: string; yow: string; other: string }[] = [
+  { crit: "Architecture", yow: "Microservices modulaires indépendants (chaque service déployable seul)", other: "Monolithe applicatif à modules" },
+  { crit: "Identité / SSO", yow: "IdP centralisé OIDC natif, JWT RS256 — un seul compte pour tout l'écosystème", other: "Authentification intégrée à l'application" },
+  { crit: "Multi-organisation", yow: "Native au cœur (multi-tenant + multi-org)", other: "Via instances / configuration" },
+  { crit: "Conformité", yow: "OHADA native", other: "Localisation à configurer" },
+  { crit: "Souveraineté des données", yow: "Hébergement en Afrique", other: "Cloud éditeur (souvent hors zone)" },
+  { crit: "Intégration externe", yow: "API-first, token-exchange service-à-service (RFC 8693)", other: "API disponible, plus couplée" },
+];
+
 function PlatformIcon({ icon, name, className }: { icon: string; name: string; className?: string }) {
   if (icon.startsWith("http")) {
     return (
@@ -122,6 +132,34 @@ function Landing() {
           <div className="scard"><div className="scard__ic">🏢</div><div className="scard__nm">Multi-organisation</div><div className="scard__tg">Accédez à plusieurs entreprises et leurs services depuis le même compte.</div></div>
           <div className="scard"><div className="scard__ic">🛡️</div><div className="scard__nm">Sécurisé &amp; conforme</div><div className="scard__tg">Jetons signés RS256, vérifiables par chaque service, standard OIDC.</div></div>
         </div>
+
+        <div className="cmp">
+          <div className="cmp__head">
+            <h3>Yowyob face aux plateformes tout-en-un</h3>
+            <p>Là où Odoo &amp; les suites classiques regroupent tout dans une seule application, Yowyob s&apos;appuie sur un cœur d&apos;identité et des services modulaires.</p>
+          </div>
+          <div className="cmp__scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Critère</th>
+                  <th className="cmp__yowcol">Yowyob / KSM</th>
+                  <th>Odoo &amp; plateformes tout-en-un</th>
+                </tr>
+              </thead>
+              <tbody>
+                {COMPARISON.map((r) => (
+                  <tr key={r.crit}>
+                    <td className="cmp__crit">{r.crit}</td>
+                    <td className="cmp__yow">{r.yow}</td>
+                    <td className="cmp__other">{r.other}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <div style={{ textAlign: "center", marginTop: 28 }}>
           <Link href="/login?mode=signup" className="btn btn-orange btn-lg">Commencer gratuitement →</Link>
         </div>

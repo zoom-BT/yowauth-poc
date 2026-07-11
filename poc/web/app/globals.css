@@ -148,7 +148,7 @@ a:hover { text-decoration: underline; }
 
 /* ---------- Footer enrichi (partagé) ---------- */
 .site-footer { border-top: 1px solid var(--line); margin-top: 48px; background: #fbfaff; }
-.site-footer__in { display: grid; grid-template-columns: 1.7fr 1fr 1fr; gap: 32px; padding: 40px 0 28px; }
+.site-footer__in { display: grid; grid-template-columns: 1.7fr 1fr 1fr 1fr; gap: 32px; padding: 40px 0 28px; }
 .site-footer__brand .logo { margin-bottom: 12px; }
 .site-footer__tag { color: var(--muted); font-size: 13.5px; line-height: 1.6; margin: 0 0 14px; max-width: 38ch; }
 .site-footer__badges { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -163,6 +163,26 @@ a:hover { text-decoration: underline; }
   .site-footer__brand { grid-column: 1 / -1; }
 }
 @media (max-width: 540px) { .site-footer__in { grid-template-columns: 1fr; } }
+
+/* ---------- Comparaison / benchmark ---------- */
+.cmp { margin-top: 36px; }
+.cmp__head { text-align: center; margin-bottom: 18px; }
+.cmp__head h3 { margin: 0 0 6px; font-size: 20px; letter-spacing: -0.01em; color: var(--brand-ink); }
+.cmp__head p { margin: 0 auto; color: var(--muted); font-size: 14px; max-width: 62ch; }
+.cmp__scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: #fff; box-shadow: var(--shadow-sm); }
+.cmp table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
+.cmp th, .cmp td { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.cmp thead th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); background: #fafafa; font-weight: 700; }
+.cmp thead th.cmp__yowcol { color: var(--violet); }
+.cmp tbody tr:last-child td { border-bottom: 0; }
+.cmp tbody tr:hover td { background: #faf9ff; }
+.cmp__crit { font-weight: 700; color: var(--brand-ink); width: 24%; }
+.cmp__yow { color: var(--ink); background: color-mix(in srgb, var(--violet) 4%, #fff); }
+.cmp__other { color: var(--muted); }
+@media (max-width: 540px) {
+  .cmp th, .cmp td { padding: 11px 12px; }
+  .cmp table { font-size: 13px; }
+}
 
 /* ---------- Dashboard Layout ---------- */
 .dash { display: grid; grid-template-columns: 1fr 340px; gap: 28px; padding: 40px 0; }
