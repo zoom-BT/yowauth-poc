@@ -1,20 +1,17 @@
 // Client API YowAuth — encapsule les appels à l'IdP (sign-up, vérif, login, profil).
 
 export const config = {
-  PRIMARY_API: process.env.NEXT_PUBLIC_PRIMARY_API_URL ?? "https://kernel-core.yowyob.com",
-  SECONDARY_API: process.env.NEXT_PUBLIC_SECONDARY_API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080",
-  CLIENT_ID: process.env.NEXT_PUBLIC_CLIENT_ID ?? "poc-client",
-  API_KEY: process.env.NEXT_PUBLIC_API_KEY ?? "poc-secret-key",
-  TENANT: process.env.NEXT_PUBLIC_TENANT_ID ?? "00000000-0000-0000-0000-000000000001",
+  // Le navigateur ne parle qu'au BFF (même origine) : /api/proxy. Aucun secret côté client.
+  PROXY_BASE: process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api/proxy",
+  // Non secrets — conservés uniquement pour affichage (le proxy réinjecte les vraies valeurs).
+  CLIENT_ID: process.env.NEXT_PUBLIC_CLIENT_ID ?? "",
+  TENANT: process.env.NEXT_PUBLIC_TENANT_ID ?? "",
   SERVICE_CODE: process.env.NEXT_PUBLIC_SERVICE_CODE ?? "SALES",
-  get API() { return this.PRIMARY_API; }
 };
 
+// Le proxy BFF injecte X-Client-Id / X-Api-Key / X-Tenant-Id côté serveur.
 const baseHeaders: Record<string, string> = {
   "Content-Type": "application/json",
-  "X-Client-Id": config.CLIENT_ID,
-  "X-Api-Key": config.API_KEY,
-  "X-Tenant-Id": config.TENANT,
 };
 
 export type Organization = {
@@ -91,33 +88,12 @@ export type UserAccountResponse = {
 type ApiResponse<T> = { success: boolean; data: T; message?: string; errorCode?: string };
 
 /**
- * Effectue un appel HTTP fetch résilient. Tente d'abord de contacter l'API principale.
- * En cas d'erreur réseau (ex: serveur indisponible), d'erreur de proxy (502, 503, 504), ou
- * si l'endpoint n'est pas trouvé/implémenté sur l'API principale (404, 501),
- * la requête est automatiquement re-soumise sur l'API de repli (POC).
+ * Appel HTTP vers le kernel, via le BFF proxy (même origine → aucun CORS).
+ * `path` est le chemin kernel (ex. "/api/auth/login") ; il est préfixé par /api/proxy.
+ * Les headers d'identité applicative sont injectés côté serveur par le proxy.
  */
 export async function resilientFetch(path: string, init?: RequestInit): Promise<Response> {
-  const primaryUrl = `${config.PRIMARY_API}${path}`;
-  const secondaryUrl = `${config.SECONDARY_API}${path}`;
-
-  try {
-    const res = await fetch(primaryUrl, init);
-    // Bascule sur le serveur secondaire si le service est indisponible ou si l'endpoint n'est pas implémenté
-    if (
-      res.status === 404 ||
-      res.status === 501 ||
-      res.status === 502 ||
-      res.status === 503 ||
-      res.status === 504
-    ) {
-      console.warn(`[Failover YowAuth] L'API principale (${config.PRIMARY_API}) a retourné le statut ${res.status} pour ${path}. Bascule sur l'API de repli (${config.SECONDARY_API}).`);
-      return await fetch(secondaryUrl, init);
-    }
-    return res;
-  } catch (error) {
-    console.warn(`[Failover YowAuth] L'API principale (${config.PRIMARY_API}) est injoignable (${error}). Bascule sur l'API de repli (${config.SECONDARY_API}).`);
-    return await fetch(secondaryUrl, init);
-  }
+  return fetch(`${config.PROXY_BASE}${path}`, init);
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
@@ -327,14 +303,14 @@ export async function disableMfa(accessToken: string): Promise<Profile> {
 
 /** OIDC Token Exchange (RFC 8693) — Échange le SSO Token contre un jeton d'accès de service. */
 export async function exchangeToken(ssoToken: string, contextId: string, serviceCode: string): Promise<{ access_token: string; token_type: string; expires_in: number; scope: string }> {
+  // client_id / client_secret ne sont plus envoyés depuis le navigateur :
+  // le BFF proxy injecte l'authentification client (Basic) pour /oauth2/token.
   const form = new URLSearchParams({
     grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
     subject_token: ssoToken,
     subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
     context_id: contextId,
     service_code: serviceCode,
-    client_id: config.CLIENT_ID,
-    client_secret: config.API_KEY,
   });
 
   const res = await resilientFetch(`/oauth2/token`, {

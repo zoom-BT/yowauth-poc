@@ -4,11 +4,10 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { config, decodeJwt, resilientFetch } from "../lib/yowauth";
 
+// Les headers d'identité applicative (X-Client-Id / X-Api-Key / X-Tenant-Id) sont
+// injectés côté serveur par le BFF proxy ; le navigateur n'envoie que le Content-Type.
 const H: Record<string, string> = {
   "Content-Type": "application/json",
-  "X-Client-Id": config.CLIENT_ID,
-  "X-Api-Key": config.API_KEY,
-  "X-Tenant-Id": config.TENANT,
 };
 
 type Status = "pending" | "run" | "ok" | "err";
@@ -91,7 +90,7 @@ export default function DemoPage() {
     const user = `poc_${Date.now()}`;
     const pw = "P@ssw0rd!2024";
 
-    add("info", `# cibles : principale = ${config.PRIMARY_API} | repli = ${config.SECONDARY_API}`);
+    add("info", `# cible : ${config.PROXY_BASE} (BFF → kernel, headers d'app injectés côté serveur)`);
     add("info", `# identité de test : ${user}`);
 
     try {
@@ -152,8 +151,7 @@ export default function DemoPage() {
           subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
           context_id: ctx,
           service_code: config.SERVICE_CODE,
-          client_id: config.CLIENT_ID,
-          client_secret: config.API_KEY,
+          // client_id / client_secret injectés par le BFF (Basic auth) — pas dans le navigateur.
         },
       });
       const svcAccess = (xchg.json as { access_token?: string })?.access_token ?? "";
@@ -181,7 +179,7 @@ export default function DemoPage() {
         </nav>
 
         <h1 className="lab__title">YowAuth <span className="accent">// flow runner</span></h1>
-        <p className="lab__sub">Exécution live du flux d&apos;authentification contre {config.API.replace(/^https?:\/\//, "")}</p>
+        <p className="lab__sub">Exécution live du flux d&apos;authentification via le BFF proxy (même origine → kernel)</p>
 
         <button className="run" onClick={run} disabled={running}>
           {running ? "● running…" : "▶ exécuter le flux"}
