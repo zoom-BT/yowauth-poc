@@ -10,7 +10,7 @@ import { NextRequest } from "next/server";
  */
 export const runtime = "nodejs";
 
-const BACKEND = (process.env.KSM_BACKEND_URL ?? "https://kernel-core.yowyob.com").replace(/\/$/, "");
+const BACKEND = (process.env.KSM_BACKEND_URL ?? "https://kernel-core.yowyob.com/kernel-api").replace(/\/$/, "");
 const CLIENT_ID = process.env.KSM_CLIENT_ID ?? "";
 const CLIENT_KEY = process.env.KSM_CLIENT_KEY ?? "";
 const TENANT_ID = process.env.KSM_TENANT_ID ?? "";
