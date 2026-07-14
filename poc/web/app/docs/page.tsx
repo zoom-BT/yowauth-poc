@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import SiteFooter from "../components/SiteFooter";
+import AppLauncher from "../components/AppLauncher";
 
 export const metadata: Metadata = {
   title: "YowAuth — Guide API (serveur réel)",
@@ -129,6 +130,7 @@ export default function DocsPage() {
             <Link href="/">← Connexion</Link>
             <Link href="/demo">Démo technique</Link>
             <a href={`${KERNEL}/swagger-ui/index.html`} target="_blank" rel="noreferrer">Swagger serveur réel ↗</a>
+            <AppLauncher light />
           </nav>
           <h1 className="doc__title">YowAuth — Guide API (serveur réel)</h1>
           <p className="doc__lead">

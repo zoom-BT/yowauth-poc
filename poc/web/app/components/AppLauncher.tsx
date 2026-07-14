@@ -10,8 +10,9 @@ function Icon({ p }: { p: Platform }) {
   return <span style={{ fontSize: "20px" }}>{p.icon}</span>;
 }
 
-/** App-launcher « 9 points » à la Google : ouvre une grille des services de l'écosystème. */
-export default function AppLauncher() {
+/** App-launcher « 9 points » à la Google : ouvre une grille des services de l'écosystème.
+ *  `light` : points blancs, pour les en-têtes sombres (docs, démo). */
+export default function AppLauncher({ light = false }: { light?: boolean }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -32,7 +33,7 @@ export default function AppLauncher() {
   const apps = [...ECOSYSTEM, ...KSM_MODULES];
 
   return (
-    <div className="applauncher" ref={ref}>
+    <div className={`applauncher${light ? " applauncher--light" : ""}`} ref={ref}>
       <button
         type="button"
         className="applauncher__btn"

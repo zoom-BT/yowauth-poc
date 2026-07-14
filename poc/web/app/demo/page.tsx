@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { config, decodeJwt, resilientFetch } from "../lib/yowauth";
+import AppLauncher from "../components/AppLauncher";
 
 // Les headers d'identité applicative (X-Client-Id / X-Api-Key / X-Tenant-Id) sont
 // injectés côté serveur par le BFF proxy ; le navigateur n'envoie que le Content-Type.
@@ -176,6 +177,7 @@ export default function DemoPage() {
         <nav className="lab__nav">
           <Link href="/">← Connexion</Link>
           <Link href="/docs">Guide API</Link>
+          <AppLauncher light />
         </nav>
 
         <h1 className="lab__title">YowAuth <span className="accent">// flow runner</span></h1>

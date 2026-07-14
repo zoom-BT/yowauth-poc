@@ -61,6 +61,9 @@ a:hover { text-decoration: underline; }
 .applauncher__app:hover { background: var(--violet-soft); text-decoration: none; }
 .applauncher__ic { width: 42px; height: 42px; border-radius: 11px; overflow: hidden; display: grid; place-items: center; background: var(--violet-soft); }
 .applauncher__nm { font-size: 11px; line-height: 1.2; color: var(--ink-soft); }
+.applauncher--light .applauncher__dots i { background: #ffffff; }
+.applauncher--light .applauncher__btn:hover { background: rgba(255, 255, 255, 0.14); }
+.doc__nav .applauncher, .lab__nav .applauncher { margin-left: auto; }
 
 /* ---------- Buttons ---------- */
 .btn { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font: inherit; font-weight: 700; font-size: 14px; border: 0; border-radius: 10px; padding: 10px 18px; transition: transform 0.12s, filter 0.15s, box-shadow 0.15s; text-decoration: none; }
