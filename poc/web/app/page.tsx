@@ -4,16 +4,16 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { decodeJwt, type Session, selectContext, updatePlan, enableMfa, confirmMfa, disableMfa, exchangeToken, fetchUserInfo } from "./lib/yowauth";
 import { useSession, saveSession } from "./lib/session";
-import { PLATFORMS, accessiblePlatforms, otherPlatforms, type Platform } from "./lib/platforms";
+import { PLATFORMS, ECOSYSTEM, KSM_MODULES, accessiblePlatforms, otherPlatforms, type Platform } from "./lib/platforms";
 import SiteFooter from "./components/SiteFooter";
 
-/** Pourquoi Yowyob plutôt qu'un ERP classique — formulé côté usage utilisateur. */
+/** Yowyob (écosystème) face aux grands écosystèmes de même type (Zoho One, Odoo, Salesforce/SAP). */
 const COMPARISON: { crit: string; yow: string; other: string }[] = [
-  { crit: "Un seul compte", yow: "Un identifiant unique pour toutes vos activités — ventes, stock, RH, comptabilité…", other: "Souvent un compte ou une connexion par application" },
-  { crit: "Plusieurs entreprises & agences", yow: "Gérez plusieurs sociétés et agences depuis un seul espace, avec des droits par personne", other: "Multi-société à mettre en place, souvent technique" },
-  { crit: "Services à la carte", yow: "Activez seulement les modules utiles — vous ne payez pas le superflu", other: "Modules souvent installés et facturés en bloc" },
-  { crit: "Tout reste synchronisé", yow: "Une vente met à jour le stock, la caisse et la comptabilité automatiquement", other: "Synchronisation à paramétrer entre les modules" },
-  { crit: "Comptabilité prête pour l'Afrique", yow: "Comptabilité conforme OHADA prête à l'emploi, sans extension", other: "Comptabilité OHADA via une localisation ou un plugin" },
+  { crit: "Périmètre", yow: "Un écosystème complet : ERP (KSM), mobilité (Rental, Fleetman, RidnGo), paiement, événementiel, chat, KYC…", other: "Surtout gestion / CRM / ERP ; mobilité & paiement limités ou absents" },
+  { crit: "Un seul compte (One ID)", yow: "One ID pour tous les services de l'écosystème", other: "SSO selon l'éditeur, souvent cloisonné par produit" },
+  { crit: "Services qui se parlent", yow: "Identité, organisations et événements partagés nativement entre services", other: "Intégrations à configurer entre les produits" },
+  { crit: "Ancrage africain", yow: "Pensé pour l'Afrique : OHADA, paiements et mobilité locaux", other: "Localisation via modules ou partenaires" },
+  { crit: "Ouverture", yow: "API-first : chaque service exposé et composable", other: "API disponibles, tarification par produit" },
 ];
 
 function PlatformIcon({ icon, name, className }: { icon: string; name: string; className?: string }) {
@@ -39,7 +39,7 @@ function Logo() {
   return (
     <Link href="/" className="logo" style={{ textDecoration: "none", color: "inherit" }}>
       <span className="logo__mark">Y</span>
-      <span className="logo__name">Yowyob<small>Compte unique</small></span>
+      <span className="logo__name">Yowyob<small>One ID</small></span>
     </Link>
   );
 }
@@ -91,7 +91,7 @@ function Landing() {
         <div className="preview" aria-hidden>
           <div className="preview__bar"><i className="r" /><i className="y" /><i className="g" /><span>mes plateformes</span></div>
           <div className="preview__grid">
-            {PLATFORMS.slice(0, 9).map((p) => (
+            {ECOSYSTEM.slice(0, 9).map((p) => (
               <div key={p.code} className="ptile">
                 <div className="ic" style={{ width: "32px", height: "32px", margin: "0 auto", borderRadius: "8px", overflow: "hidden", display: "grid", placeItems: "center" }}>
                   <PlatformIcon icon={p.icon} name={p.name} />
@@ -105,26 +105,42 @@ function Landing() {
 
       <section id="plateformes" className="wrap section">
         <div className="section__head">
-          <h2>Toutes vos plateformes, au même endroit</h2>
-          <p>Un catalogue de services métier, accessibles selon les droits de votre organisation.</p>
+          <h2>Tout l&apos;écosystème Yowyob, un seul compte</h2>
+          <p>Yowyob n&apos;est pas un logiciel de plus : c&apos;est un écosystème de services — dont l&apos;ERP KSM — accessibles avec une identité unique. Cliquez pour ouvrir un service.</p>
         </div>
         <div className="grid">
-          {PLATFORMS.map((p) => (
-            <div key={p.code} className="scard">
+          {ECOSYSTEM.map((p) => (
+            <a key={p.code} className="scard scard--link" href={p.url} target="_blank" rel="noreferrer" style={{ ["--hue" as string]: p.hue }}>
               <div className="scard__ic" style={{ background: `color-mix(in srgb, ${p.hue} 14%, #fff)`, overflow: "hidden" }}>
                 <PlatformIcon icon={p.icon} name={p.name} />
               </div>
               <div className="scard__nm">{p.name}</div>
               <div className="scard__tg">{p.tagline}</div>
-            </div>
+            </a>
+          ))}
+        </div>
+
+        <div className="section__head" style={{ marginTop: 44 }}>
+          <h2 style={{ fontSize: 22 }}>Modules de l&apos;ERP KSM</h2>
+          <p>La gestion commerciale complète (OHADA), intégrée à l&apos;écosystème.</p>
+        </div>
+        <div className="grid">
+          {KSM_MODULES.map((p) => (
+            <a key={p.code} className="scard scard--link" href={p.url} target="_blank" rel="noreferrer" style={{ ["--hue" as string]: p.hue }}>
+              <div className="scard__ic" style={{ background: `color-mix(in srgb, ${p.hue} 14%, #fff)`, overflow: "hidden" }}>
+                <PlatformIcon icon={p.icon} name={p.name} />
+              </div>
+              <div className="scard__nm">{p.name}</div>
+              <div className="scard__tg">{p.tagline}</div>
+            </a>
           ))}
         </div>
       </section>
 
       <section id="pourquoi" className="wrap section">
         <div className="section__head">
-          <h2>Pourquoi un compte unique&nbsp;?</h2>
-          <p>Yowyob centralise l&apos;identité de toutes vos applications métier.</p>
+          <h2>Pourquoi Yowyob&nbsp;?</h2>
+          <p>Une identité unique (One ID) pour tout un écosystème de services.</p>
         </div>
         <div className="grid">
           <div className="scard"><div className="scard__ic">🔑</div><div className="scard__nm">Une identité</div><div className="scard__tg">Un seul compte pour toutes les plateformes, fini les mots de passe multiples.</div></div>
@@ -134,8 +150,8 @@ function Landing() {
 
         <div className="cmp">
           <div className="cmp__head">
-            <h3>Pourquoi Yowyob plutôt qu&apos;un ERP classique&nbsp;?</h3>
-            <p>Odoo, ERPNext et les ERP classiques sont puissants, mais pensés « logiciel ». Yowyob part de vos usages : un compte, vos entreprises, et seulement les services dont vous avez besoin.</p>
+            <h3>Yowyob face aux grands écosystèmes</h3>
+            <p>Yowyob n&apos;est pas un ERP : c&apos;est un écosystème de services — l&apos;ERP KSM n&apos;en est qu&apos;une brique. Là où Zoho One, Odoo ou Salesforce couvrent surtout la gestion, Yowyob va de la gestion à la mobilité, au paiement et à l&apos;événementiel, sous une identité unique.</p>
           </div>
           <div className="cmp__scroll">
             <table>
@@ -143,7 +159,7 @@ function Landing() {
                 <tr>
                   <th>Critère</th>
                   <th className="cmp__yowcol">Yowyob</th>
-                  <th>Odoo, ERPNext &amp; ERP classiques</th>
+                  <th>Zoho One, Odoo, Salesforce / SAP</th>
                 </tr>
               </thead>
               <tbody>

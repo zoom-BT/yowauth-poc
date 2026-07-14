@@ -18,7 +18,7 @@ export default function SiteFooter() {
           <Link href="/" className="logo" style={{ textDecoration: "none", color: "inherit" }}>
             <span className="logo__mark">Y</span>
             <span className="logo__name">
-              Yowyob<small>Compte unique</small>
+              Yowyob<small>One ID</small>
             </span>
           </Link>
           <p className="site-footer__tag">

@@ -221,7 +221,7 @@ export default function LoginPage() {
         <div className="authcard">
           <Link href="/" className="logo" style={{ textDecoration: "none", color: "inherit" }}>
             <span className="logo__mark">Y</span>
-            <span className="logo__name">Yowyob<small>Compte unique</small></span>
+            <span className="logo__name">Yowyob<small>One ID</small></span>
           </Link>
 
           <h2>Mot de passe oublié</h2>
@@ -329,7 +329,7 @@ export default function LoginPage() {
         <div className="authcard">
           <Link href="/" className="logo" style={{ textDecoration: "none", color: "inherit" }}>
             <span className="logo__mark">Y</span>
-            <span className="logo__name">Yowyob<small>Compte unique</small></span>
+            <span className="logo__name">Yowyob<small>One ID</small></span>
           </Link>
 
           <h2>{mode === "login" ? "Connexion" : "Créer un compte"}</h2>
