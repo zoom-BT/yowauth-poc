@@ -6,6 +6,7 @@ import { decodeJwt, type Session, selectContext, updatePlan, enableMfa, confirmM
 import { useSession, saveSession } from "./lib/session";
 import { PLATFORMS, ECOSYSTEM, KSM_MODULES, accessiblePlatforms, otherPlatforms, type Platform } from "./lib/platforms";
 import SiteFooter from "./components/SiteFooter";
+import AppLauncher from "./components/AppLauncher";
 
 /** Yowyob (écosystème) face aux grands écosystèmes de même type (Zoho One, Odoo, Salesforce/SAP). */
 const COMPARISON: { crit: string; yow: string; other: string }[] = [
@@ -63,6 +64,7 @@ function Landing() {
             <Link href="/login">Se connecter</Link>
           </div>
           <div className="nav__actions">
+            <AppLauncher />
             <Link href="/login" className="btn btn-ghost">Se connecter</Link>
             <Link href="/login?mode=signup" className="btn btn-orange">Créer un compte</Link>
           </div>
@@ -88,16 +90,16 @@ function Landing() {
           </div>
         </div>
 
-        <div className="preview" aria-hidden>
+        <div className="preview">
           <div className="preview__bar"><i className="r" /><i className="y" /><i className="g" /><span>mes plateformes</span></div>
           <div className="preview__grid">
             {ECOSYSTEM.slice(0, 9).map((p) => (
-              <div key={p.code} className="ptile">
+              <a key={p.code} className="ptile" href={p.url} target="_blank" rel="noreferrer" title={p.name}>
                 <div className="ic" style={{ width: "32px", height: "32px", margin: "0 auto", borderRadius: "8px", overflow: "hidden", display: "grid", placeItems: "center" }}>
                   <PlatformIcon icon={p.icon} name={p.name} />
                 </div>
                 <div className="nm">{p.name}</div>
-              </div>
+              </a>
             ))}
           </div>
         </div>
@@ -384,6 +386,7 @@ function Launcher({ session }: { session: Session }) {
         <div className="wrap nav__in">
           <Logo />
           <div className="nav__actions">
+            <AppLauncher />
             <Link href="/docs" className="btn btn-ghost">Guide API</Link>
             <Link href="/demo" className="btn btn-ghost">Démo</Link>
             <span className="chip" style={{ background: "var(--violet-soft)", color: "var(--brand-ink)", fontWeight: 600 }}>

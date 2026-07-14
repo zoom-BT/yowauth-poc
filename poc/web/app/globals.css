@@ -47,6 +47,21 @@ a:hover { text-decoration: underline; }
 .nav__links a { color: var(--ink-soft); font-size: 14px; font-weight: 500; }
 .nav__actions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 
+/* ---------- App launcher (9 points, à la Google) ---------- */
+.applauncher { position: relative; display: flex; align-items: center; }
+.applauncher__btn { appearance: none; border: 0; background: transparent; cursor: pointer; width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; transition: background 0.15s; }
+.applauncher__btn:hover { background: var(--violet-soft); }
+.applauncher__dots { display: grid; grid-template-columns: repeat(3, 4px); gap: 3px; }
+.applauncher__dots i { width: 4px; height: 4px; border-radius: 50%; background: var(--ink-soft); display: block; }
+.applauncher__pop { position: absolute; right: 0; top: 50px; width: 340px; max-width: 86vw; background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 12px; z-index: 60; animation: pop-in 0.14s ease both; }
+@keyframes pop-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.applauncher__head { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 4px 8px 10px; }
+.applauncher__apps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; max-height: 340px; overflow-y: auto; }
+.applauncher__app { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 12px 6px; border-radius: 12px; text-decoration: none; color: var(--ink); text-align: center; transition: background 0.14s; }
+.applauncher__app:hover { background: var(--violet-soft); text-decoration: none; }
+.applauncher__ic { width: 42px; height: 42px; border-radius: 11px; overflow: hidden; display: grid; place-items: center; background: var(--violet-soft); }
+.applauncher__nm { font-size: 11px; line-height: 1.2; color: var(--ink-soft); }
+
 /* ---------- Buttons ---------- */
 .btn { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font: inherit; font-weight: 700; font-size: 14px; border: 0; border-radius: 10px; padding: 10px 18px; transition: transform 0.12s, filter 0.15s, box-shadow 0.15s; text-decoration: none; }
 .btn:hover { text-decoration: none; }
@@ -80,6 +95,8 @@ a:hover { text-decoration: underline; }
 .preview__bar span { margin-left: 6px; font-size: 12px; color: var(--muted); }
 .preview__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .ptile { border: 1px solid var(--line); border-radius: 14px; padding: 12px 10px; text-align: center; background: #fff; }
+a.ptile { text-decoration: none; color: inherit; cursor: pointer; transition: transform 0.14s, border-color 0.14s, box-shadow 0.14s; display: block; }
+a.ptile:hover { text-decoration: none; border-color: var(--violet); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
 .ptile .ic { font-size: 22px; }
 .ptile .nm { font-size: 11px; font-weight: 600; color: var(--ink-soft); margin-top: 6px; }
 
