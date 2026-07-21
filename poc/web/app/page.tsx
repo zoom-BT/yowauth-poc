@@ -391,7 +391,7 @@ function Launcher({ session }: { session: Session }) {
             <Link href="/demo" className="btn btn-ghost">Démo</Link>
             <span className="chip" style={{ background: "var(--violet-soft)", color: "var(--brand-ink)", fontWeight: 600 }}>
               <span className="av">{initial}</span>
-              {p.username}
+              <span className="chip__nm">{p.username}</span>
             </span>
             <button className="btn btn-outline" style={{ borderColor: "#fecaca", color: "#b91c1c" }} onClick={() => saveSession(null)}>Déconnexion</button>
           </div>
