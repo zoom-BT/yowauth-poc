@@ -1,0 +1,17 @@
+node_modules
+.next
+out
+build
+.git
+.gitignore
+Dockerfile
+.dockerignore
+README.md
+npm-debug.log*
+*.tsbuildinfo
+# Secrets — ne JAMAIS copier dans l'image (injectés au runtime)
+.env
+.env.*
+!.env.example
+.vercel
+.DS_Store
