@@ -13,6 +13,7 @@ import {
   resetPassword,
   getCaptchaChallenge,
   verifyCaptchaChallenge,
+  toUserMessage,
   type PasswordResetContextResponse
 } from "../lib/yowauth";
 import { saveSession } from "../lib/session";
@@ -139,7 +140,7 @@ export default function LoginPage() {
       }
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(toUserMessage(err));
       setBusy(false);
       if (mode === "signup") {
         loadCaptcha();
@@ -168,7 +169,7 @@ export default function LoginPage() {
         setBusy(false);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(toUserMessage(err));
       setBusy(false);
     }
   }
@@ -180,7 +181,7 @@ export default function LoginPage() {
       setForgotStep(3);
       setBusy(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(toUserMessage(err));
       setBusy(false);
     }
   }
@@ -210,7 +211,7 @@ export default function LoginPage() {
       setConfirmNewPassword("");
       setBusy(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(toUserMessage(err));
       setBusy(false);
     }
   }

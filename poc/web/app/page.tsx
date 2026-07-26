@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { decodeJwt, type Session, selectContext, updatePlan, enableMfa, confirmMfa, disableMfa, exchangeToken, fetchUserInfo } from "./lib/yowauth";
+import { decodeJwt, type Session, selectContext, updatePlan, enableMfa, confirmMfa, disableMfa, exchangeToken, fetchUserInfo, toUserMessage } from "./lib/yowauth";
 import { useSession, saveSession } from "./lib/session";
 import { PLATFORMS, ECOSYSTEM, KSM_MODULES, accessiblePlatforms, otherPlatforms, type Platform } from "./lib/platforms";
 import SiteFooter from "./components/SiteFooter";
@@ -279,7 +279,7 @@ function Launcher({ session }: { session: Session }) {
       setCurrentPlan(updatedProfile.plan);
       session.profile.plan = updatedProfile.plan; // update in-memory instance
     } catch (err) {
-      alert("Erreur de mise à jour du plan : " + (err instanceof Error ? err.message : String(err)));
+      alert("Erreur de mise à jour du plan : " + toUserMessage(err));
     } finally {
       setUpdatingPlan(false);
     }
@@ -295,7 +295,7 @@ function Launcher({ session }: { session: Session }) {
       setMfaSetupCodePreview(res.codePreview || null);
       setMfaSetupStep("verify_otp");
     } catch (err) {
-      setMfaError("Échec d'activation : " + (err instanceof Error ? err.message : String(err)));
+      setMfaError("Échec d'activation : " + toUserMessage(err));
     } finally {
       setMfaBusy(false);
     }
@@ -329,7 +329,7 @@ function Launcher({ session }: { session: Session }) {
       setMfaActive(false);
       alert("MFA désactivé avec succès !");
     } catch (err) {
-      setMfaError("Échec de désactivation : " + (err instanceof Error ? err.message : String(err)));
+      setMfaError("Échec de désactivation : " + toUserMessage(err));
     } finally {
       setMfaBusy(false);
     }
@@ -375,7 +375,7 @@ function Launcher({ session }: { session: Session }) {
     } catch (err) {
       setSsoLogs((l) => [
         ...l,
-        `[ERREUR SSO] Échec de l'échange de jeton : ${err instanceof Error ? err.message : String(err)}`
+        `[ERREUR SSO] Échec de l'échange de jeton : ${toUserMessage(err)}`
       ]);
     }
   };

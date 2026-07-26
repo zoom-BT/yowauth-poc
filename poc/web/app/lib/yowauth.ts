@@ -88,6 +88,64 @@ export type UserAccountResponse = {
 type ApiResponse<T> = { success: boolean; data: T; message?: string; errorCode?: string };
 
 /**
+ * Erreur applicative porteuse d'un message DÉJÀ prêt à afficher à l'utilisateur.
+ * On ne laisse jamais fuiter de dump technique (HTML, stacktrace, log brut) vers l'UI.
+ */
+export class ApiError extends Error {
+  status: number;
+  errorCode?: string;
+  constructor(status: number, message: string, errorCode?: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.errorCode = errorCode;
+  }
+}
+
+// Messages FR par code d'erreur métier du kernel (les plus fréquents).
+const ERROR_MESSAGES: Record<string, string> = {
+  AUTH_INVALID_CREDENTIALS: "Identifiant ou mot de passe incorrect.",
+  AUTH_ACCOUNT_LOCKED: "Votre compte est temporairement bloqué. Réessayez plus tard.",
+  AUTH_MFA_INVALID_CODE: "Code de vérification incorrect. Veuillez réessayer.",
+  AUTH_MFA_EXPIRED: "Le code de vérification a expiré. Demandez-en un nouveau.",
+  AUTH_EMAIL_ALREADY_EXISTS: "Un compte existe déjà avec cet email.",
+  AUTH_USERNAME_ALREADY_EXISTS: "Ce nom d'utilisateur est déjà pris.",
+};
+
+/** Repli poli et neutre selon le code HTTP, quand aucun message propre n'est disponible. */
+function messageForStatus(status: number): string {
+  if (status === 0) return "Connexion au service impossible. Vérifiez votre connexion Internet et réessayez.";
+  if (status === 400) return "Les informations saisies sont invalides. Veuillez vérifier et réessayer.";
+  if (status === 401) return "Identifiant ou mot de passe incorrect.";
+  if (status === 403) return "Vous n'êtes pas autorisé à effectuer cette action.";
+  if (status === 404) return "Service momentanément indisponible. Veuillez réessayer dans quelques instants.";
+  if (status === 409) return "Ce compte existe déjà.";
+  if (status === 429) return "Trop de tentatives. Veuillez patienter un instant avant de réessayer.";
+  if (status >= 500) return "Une erreur technique est survenue de notre côté. Veuillez réessayer plus tard.";
+  return "Une erreur est survenue. Veuillez réessayer.";
+}
+
+/** Un message renvoyé par le kernel est-il présentable tel quel ? (phrase courte, pas de HTML) */
+function isCleanMessage(m?: string): m is string {
+  return !!m && m.length <= 160 && !m.includes("<") && !/doctype|<html/i.test(m);
+}
+
+/** Choisit le meilleur message affichable : code métier FR > message kernel propre > repli HTTP. */
+function friendlyMessage(status: number, body?: { message?: string; errorCode?: string }): string {
+  const code = body?.errorCode;
+  if (code && ERROR_MESSAGES[code]) return ERROR_MESSAGES[code];
+  if (isCleanMessage(body?.message)) return body!.message!;
+  return messageForStatus(status);
+}
+
+/** Convertit n'importe quelle exception en message utilisateur propre (jamais de technique brute). */
+export function toUserMessage(err: unknown): string {
+  if (err instanceof ApiError) return err.message;
+  if (err instanceof Error && isCleanMessage(err.message)) return err.message;
+  return "Une erreur inattendue est survenue. Veuillez réessayer.";
+}
+
+/**
  * Appel HTTP vers le kernel, via le BFF proxy (même origine → aucun CORS).
  * `path` est le chemin kernel (ex. "/api/auth/login") ; il est préfixé par /api/proxy.
  * Les headers d'identité applicative sont injectés côté serveur par le proxy.
@@ -97,16 +155,24 @@ export async function resilientFetch(path: string, init?: RequestInit): Promise<
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
-  const res = await resilientFetch(path, init);
+  let res: Response;
+  try {
+    res = await resilientFetch(path, init);
+  } catch {
+    // Échec réseau (service injoignable, hors-ligne, DNS…) : message neutre, jamais l'erreur brute.
+    throw new ApiError(0, messageForStatus(0));
+  }
   const text = await res.text();
   let body: ApiResponse<T>;
   try {
     body = JSON.parse(text) as ApiResponse<T>;
   } catch {
-    throw new Error(`Réponse non-JSON (HTTP ${res.status}) : ${text.slice(0, 200)}`);
+    // Réponse non-JSON (page d'erreur HTML, proxy momentanément indisponible…) :
+    // on ne montre JAMAIS le dump — juste un message propre selon le code HTTP.
+    throw new ApiError(res.status, messageForStatus(res.status));
   }
   if (!res.ok || body.success === false) {
-    throw new Error(body?.message || `Échec (HTTP ${res.status})`);
+    throw new ApiError(res.status, friendlyMessage(res.status, body), body?.errorCode);
   }
   return body;
 }
@@ -313,31 +379,41 @@ export async function exchangeToken(ssoToken: string, contextId: string, service
     service_code: serviceCode,
   });
 
-  const res = await resilientFetch(`/oauth2/token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: form.toString(),
-  });
+  let res: Response;
+  try {
+    res = await resilientFetch(`/oauth2/token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: form.toString(),
+    });
+  } catch {
+    throw new ApiError(0, messageForStatus(0));
+  }
   const text = await res.text();
   if (!res.ok) {
-    throw new Error(`Token Exchange failed (HTTP ${res.status}): ${text}`);
+    throw new ApiError(res.status, messageForStatus(res.status));
   }
   return JSON.parse(text);
 }
 
 /** Récupère les infos OIDC userinfo via le jeton de service. */
 export async function fetchUserInfo(serviceToken: string): Promise<Record<string, unknown>> {
-  const res = await resilientFetch(`/oauth2/userinfo`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${serviceToken}`
-    }
-  });
+  let res: Response;
+  try {
+    res = await resilientFetch(`/oauth2/userinfo`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${serviceToken}`
+      }
+    });
+  } catch {
+    throw new ApiError(0, messageForStatus(0));
+  }
   const text = await res.text();
   if (!res.ok) {
-    throw new Error(`UserInfo failed (HTTP ${res.status}): ${text}`);
+    throw new ApiError(res.status, messageForStatus(res.status));
   }
   return JSON.parse(text);
 }
