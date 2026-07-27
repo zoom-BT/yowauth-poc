@@ -167,12 +167,19 @@ export async function resilientFetch(path: string, init?: RequestInit): Promise<
   return fetch(`${config.PROXY_BASE}${path}`, init);
 }
 
-async function api<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Un raté transitoire (cold start de l'instance prod, passerelle pas prête) se traduit par
+// une réponse non-JSON ou un 404/5xx. On retente quelques fois : le blip devient invisible.
+const MAX_RETRIES = 2;
+
+async function api<T>(path: string, init?: RequestInit, attempt = 0): Promise<ApiResponse<T>> {
   let res: Response;
   try {
     res = await resilientFetch(path, init);
   } catch {
-    // Échec réseau (service injoignable, hors-ligne, DNS…) : message neutre, jamais l'erreur brute.
+    // Échec réseau (service injoignable, hors-ligne, DNS…). Transitoire → on retente.
+    if (attempt < MAX_RETRIES) { await sleep(400 * (attempt + 1)); return api(path, init, attempt + 1); }
     throw new ApiError(0, messageForStatus(0));
   }
   const text = await res.text();
@@ -180,11 +187,16 @@ async function api<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>>
   try {
     body = JSON.parse(text) as ApiResponse<T>;
   } catch {
-    // Réponse non-JSON (page d'erreur HTML, proxy momentanément indisponible…) :
-    // on ne montre JAMAIS le dump — juste un message propre selon le code HTTP.
+    // Réponse non-JSON = l'app n'a pas traité la requête (proxy/instance pas prête, 404/502
+    // de passerelle). Transitoire → on retente ; sinon message propre, jamais le dump.
+    if (attempt < MAX_RETRIES) { await sleep(500 * (attempt + 1)); return api(path, init, attempt + 1); }
     throw new ApiError(res.status, messageForStatus(res.status));
   }
   if (!res.ok || body.success === false) {
+    // Erreurs métier (401, 400, 409…) = définitives. Seules les 502/503/504 sont transitoires.
+    if (attempt < MAX_RETRIES && (res.status === 502 || res.status === 503 || res.status === 504)) {
+      await sleep(500 * (attempt + 1)); return api(path, init, attempt + 1);
+    }
     throw new ApiError(res.status, friendlyMessage(res.status, body), body?.errorCode);
   }
   return body;
