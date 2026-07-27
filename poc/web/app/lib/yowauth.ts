@@ -132,10 +132,21 @@ function isCleanMessage(m?: string): m is string {
   return !!m && m.length <= 160 && !m.includes("<") && !/doctype|<html/i.test(m);
 }
 
-/** Choisit le meilleur message affichable : code métier FR > message kernel propre > repli HTTP. */
+/** Choisit le meilleur message affichable : code métier FR > signature connue > message kernel propre > repli HTTP. */
 function friendlyMessage(status: number, body?: { message?: string; errorCode?: string }): string {
   const code = body?.errorCode;
   if (code && ERROR_MESSAGES[code]) return ERROR_MESSAGES[code];
+
+  // Le kernel renvoie parfois une 500 avec un dump SQL brut sur violation de contrainte
+  // d'unicité (au lieu d'une 409 propre). On rattrape les cas connus pour rester actionnable.
+  const raw = body?.message ?? "";
+  if (/recovery_email|recovery email/i.test(raw))
+    return "Un compte utilise déjà cet email de contact. Utilisez-en un autre.";
+  if (/duplicate|already exists|unique constraint/i.test(raw) && /email/i.test(raw))
+    return "Un compte existe déjà avec cet email.";
+  if (/duplicate|already exists|unique constraint/i.test(raw) && /user_?name/i.test(raw))
+    return "Ce nom d'utilisateur est déjà pris. Choisissez-en un autre.";
+
   if (isCleanMessage(body?.message)) return body!.message!;
   return messageForStatus(status);
 }
