@@ -179,14 +179,28 @@ async function api<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>>
   return body;
 }
 
-/** Inscription + vérification email auto (mode PREVIEW du backend) → compte prêt à se connecter. */
-export async function signUpAndVerify(
+export type SignUpResult = {
+  username: string;
+  email: string;
+  /** Identité Yowyob générée par le kernel à partir du username (ex. alice@yowyob.com). */
+  yowyobEmail?: string;
+  status: string;
+  emailVerified: boolean;
+};
+
+/**
+ * Inscription. Le kernel crée le compte, génère l'adresse `@yowyob.com` et,
+ * en production (SMTP), envoie un email de vérification. On NE tente PAS de
+ * confirmer automatiquement : la vérif se fait via le lien reçu par email
+ * (page /auth/verify-email). Le résultat expose `yowyobEmail` pour l'afficher.
+ */
+export async function signUp(
   username: string,
   email: string,
   password: string,
   captchaVerificationToken?: string
-): Promise<void> {
-  await api(`/api/auth/sign-up`, {
+): Promise<SignUpResult> {
+  const res = await api<SignUpResult>(`/api/auth/sign-up`, {
     method: "POST",
     headers: baseHeaders,
     body: JSON.stringify({
@@ -199,15 +213,15 @@ export async function signUpAndVerify(
       captchaVerificationToken,
     }),
   });
-  const resend = await api<{ challengeTokenPreview: string }>(`/api/auth/email-verification/resend`, {
-    method: "POST",
-    headers: baseHeaders,
-    body: JSON.stringify({ principal: username }),
-  });
+  return res.data;
+}
+
+/** Confirme la vérification d'email à partir du token reçu par lien email. */
+export async function confirmEmailVerification(verificationToken: string): Promise<void> {
   await api(`/api/auth/email-verification/confirm`, {
     method: "POST",
     headers: baseHeaders,
-    body: JSON.stringify({ verificationToken: resend.data.challengeTokenPreview }),
+    body: JSON.stringify({ verificationToken }),
   });
 }
 

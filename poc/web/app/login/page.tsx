@@ -7,7 +7,7 @@ import {
   login,
   confirmLoginMfa,
   identify,
-  signUpAndVerify,
+  signUp,
   forgotPassword,
   issuePasswordReset,
   resetPassword,
@@ -94,9 +94,14 @@ export default function LoginPage() {
           throw new Error("Réponse de Captcha invalide. Veuillez réessayer.");
         }
 
-        // Étape 2 : Inscription avec le token de vérification
-        await signUpAndVerify(principal.trim(), email.trim(), password, captchaVerificationToken);
-        setSuccessMessage("Votre compte a été créé et vérifié avec succès !");
+        // Étape 2 : Inscription (le kernel crée le compte + l'adresse @yowyob.com)
+        const result = await signUp(principal.trim(), email.trim(), password, captchaVerificationToken);
+        const yow = result.yowyobEmail ? ` Votre adresse Yowyob : ${result.yowyobEmail}.` : "";
+        setSuccessMessage(
+          result.emailVerified
+            ? `Compte créé avec succès !${yow} Vous pouvez vous connecter.`
+            : `Compte créé ! Un email de vérification a été envoyé à ${result.email}. Cliquez sur le lien reçu pour activer votre compte.${yow}`
+        );
         setMode("login");
         setLoginSubStep("identify");
         setPrincipal(principal.trim());
