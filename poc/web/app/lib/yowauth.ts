@@ -110,6 +110,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   AUTH_MFA_EXPIRED: "Le code de vérification a expiré. Demandez-en un nouveau.",
   AUTH_EMAIL_ALREADY_EXISTS: "Un compte existe déjà avec cet email.",
   AUTH_USERNAME_ALREADY_EXISTS: "Ce nom d'utilisateur est déjà pris.",
+  USERNAME_DUPLICATE: "Ce nom d'utilisateur est déjà pris. Choisissez-en un autre.",
+  EMAIL_DUPLICATE: "Un compte existe déjà avec cet email.",
 };
 
 /** Repli poli et neutre selon le code HTTP, quand aucun message propre n'est disponible. */

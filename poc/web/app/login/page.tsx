@@ -177,8 +177,19 @@ export default function LoginPage() {
   async function triggerPasswordResetIssue(selToken: string, ctxId: string) {
     try {
       const issued = await issuePasswordReset(selToken, ctxId);
-      setResetToken(issued.challengeTokenPreview);
-      setForgotStep(3);
+      if (issued.challengeTokenPreview) {
+        // Mode démo : le token est renvoyé en clair → réinitialisation in-app possible.
+        setResetToken(issued.challengeTokenPreview);
+        setForgotStep(3);
+      } else {
+        // Mode production (SMTP) : le lien part par email → page /auth/reset-password.
+        setMode("login");
+        setForgotStep(1);
+        setRecoveryPrincipal("");
+        setSuccessMessage(
+          "Un email de réinitialisation vous a été envoyé. Cliquez sur le lien reçu pour définir un nouveau mot de passe."
+        );
+      }
       setBusy(false);
     } catch (err) {
       setError(toUserMessage(err));
